@@ -6,7 +6,9 @@
 	</div>
 	<!---content -->
 </div> <!-- wrapper -->
+
 </body>
+
 <?php
 if (($this->uri->segment(1) == 'sales' || $this->uri->segment(1) == 'receivings')) {
 ?>
@@ -41,6 +43,8 @@ if (($this->uri->segment(1) == 'sales' || $this->uri->segment(1) == 'receivings'
 	}
 }
 ?>
+
+
 
 <script>
 	async function delete_all_client_side_dbs()
@@ -156,5 +160,6 @@ if ($this->config->item('offline_mode'))
 
 	startWorker();	 
 </script>
+
 <?php } ?>
 </html>

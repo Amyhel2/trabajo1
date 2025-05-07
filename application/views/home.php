@@ -131,6 +131,7 @@ $this->load->helper('demo');
 							<p><?php echo lang('home_wizard_create_sale');?></p>
 							<span><?php echo anchor('sales',lang('common_go').' &raquo;', array('class' => 'btn btn-info',' style' => 'margin-left: 10px;'));?></span>
 						</div>
+						
 
 						
 							

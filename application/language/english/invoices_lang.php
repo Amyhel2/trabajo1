@@ -53,4 +53,7 @@ $lang['zatca_invoice_check_compliance'] = 'Check Compliance Invoice ...';
 $lang['zatca_invoice_reporting'] = 'Report Invoice ...';
 $lang['zatca_invoice_view_details'] = 'View Details';
 $lang['zatca_invoice_hide'] = 'Hide';
+
+
+
 ?>

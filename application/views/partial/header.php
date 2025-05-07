@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html class="<?php echo $this->config->item('language');?>">
 <head>
+	
 	<script>
 		//OAuth for square appends this, we need to reset to prevent issue with jquery
 		if (window.location.hash == "#_=_")
@@ -11,7 +12,8 @@
 		 $this->load->helper('demo');
 	 	 $company = ($company = $this->Location->get_info_for_key('company')) ? $company : $this->config->item('company');
 		 echo !is_on_demo_host() ?  $company.' -- '.lang('common_powered_by').' '.$this->config->item('branding')['name'] : 'Demo - '.$this->config->item('branding')['name'].' | Easy to use Online POS Software' ?></title>
-	<link rel="icon" href="<?php echo base_url();?>favicon_<?php echo $this->config->item('branding_code');?>.ico" type="image/x-icon"/>	
+	<link rel="icon" href="<?php echo base_url();?>favicon_<?php echo $this->config->item('branding_code');?>.ico" type="image/x-icon"/>
+	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/> <!--320-->
 	<base href="<?php echo base_url();?>" />
 	
@@ -37,6 +39,8 @@
 	</style>
 
 	<link rel="icon" href="<?php echo base_url();?>favicon_<?php echo $this->config->item('branding_code');?>.ico" type="image/x-icon"/>
+	<link rel="stylesheet" type="text/css" href=".../assets/font-awesome/css/font-awesome.min.css?...">
+
 	<script type="text/javascript">
 		
 		var APPLICATION_VERSION= "<?php echo APPLICATION_VERSION; ?>";
@@ -440,6 +444,9 @@ if (is_on_demo_host()) { ?>
 						
 						<li><a href="<?php echo site_url('invoices/index/customer'); ?>"><i class="icon ti-user"></i><?php echo lang('reports_customers')?></a></li>
 						<li><a href="<?php echo site_url('invoices/index/supplier'); ?>"><i class="icon ti-download"></i><?php echo lang('reports_suppliers')?></a></li>
+
+				        <!--Url de facturacion-->
+						<li><a href="<?php echo site_url('billing/index'); ?>"><i class="icon ti-receipt"></i><?php echo lang('reports_invoices')?></a></li>
 
 						<?php if($this->config->item('use_saudi_tax_config')){ 
 							$location_id = $this->Employee->get_logged_in_employee_current_location_id();

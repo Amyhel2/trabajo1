@@ -52,4 +52,9 @@ $lang['zatca_invoice_check_compliance'] = 'Consultar Factura de Cumplimiento...'
 $lang['zatca_invoice_reporting'] = 'Reportar Factura...';
 $lang['zatca_invoice_view_details'] = 'Ver detalles';
 $lang['zatca_invoice_hide'] = 'Esconder';
+
+
+
+
+
 ?>

@@ -44,13 +44,6 @@ $lang['reports_comments'] = 'Comments';
 
 
 
-
-
-
-
-
-
-
 $lang['reports_customer'] = 'Customer';
 
 $lang['reports_tax_percent'] = 'Tax Percent';
@@ -542,4 +535,24 @@ $lang['reports_enhanced_summary_reports'] = 'Enhanced Summary Reports';
 $lang['reports_can_change_report_date'] = 'Can Change Report Date';
 $lang['reports_suspended_sale_type'] = 'Suspended Sale Type';
 $lang['reports_exclude_ecommerce'] = 'Exclude E-Commerce';
+
+
+//Facturacion
+$lang['reports_invoices'] = 'Facturacion';
+
+$lang['facturacion_actividades_documento_sector'] = 'Actividades Documento Sector';
+$lang['facturacion_leyendas_factura'] = 'Leyendas Factura';
+$lang['facturacion_productos_servicios'] = 'Productos y Servicios';
+$lang['facturacion_eventos_significativos'] = 'Eventos Significativos';
+$lang['facturacion_motivos_anulacion'] = 'Motivos anulacion';
+$lang['facturacion_tipos_documento_identidad'] = 'Tipos Documento de Identidad';
+$lang['facturacion_tipos_documento_sector'] = 'Tipos Documento Sector';
+$lang['facturacion_tipos_emision'] = 'Tipos Emision';
+$lang['facturacion_tipos_metodo_pago'] = 'Tipos Metodos de Pago';
+$lang['facturacion_tipos_moneda'] = 'Tipos Moneda';
+$lang['facturacion_tipos_punto_venta'] = 'Tipos Punto Venta';
+$lang['facturacion_tipos_factura'] = 'Tipos Factura';
+$lang['facturacion_unidades_de_medida'] = 'Unidades de Medida';
+
+
 ?>

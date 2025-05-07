@@ -16,6 +16,8 @@ class Invoices extends Secure_area
 		$this->lang->load('sales');
 		$this->load->model('Invoice');	
 		$this->load->helper('items');
+
+
 		$this->invoice_type = 'customer';
 	}
 	
@@ -64,7 +66,6 @@ class Invoices extends Secure_area
 		echo json_encode(array('manage_table' => $data['manage_table'], 'pagination' => $data['pagination'], 'total_rows' => $config['total_rows']));
 	}	
 	
-
 	function index($type='customer',$offset=0)
 	{
 		
@@ -216,7 +217,7 @@ class Invoices extends Secure_area
 		$data['payments'] = $this->Invoice->get_payments($this->invoice_type,$invoice_id)->result_array();
 		$data['type_prefix'] = $this->invoice_type == 'customer' ? 'sale' : 'receiving';
 		     		
-		$terms = array('' => lang('common_none'));
+		$terms = array('' => lang('common_none')); 
 			
 		foreach($this->Invoice->get_all_terms() as $term_id => $term)
 		{

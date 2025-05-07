@@ -138,7 +138,7 @@ if (!(isset($standalone) && $standalone)) {
 							<li>
 								<?php echo anchor('sales/email_receipt/' . $sale_id_raw, lang('common_email_receipt', '', array(), TRUE), array('id' => 'email_receipt', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
-
+   
 						<?php } ?>
 
 						<?php if ($sale_id_raw != lang('sales_test_mode_transaction', '', array(), TRUE) && !empty($customer_phone) && $this->Location->get_info_for_key('twilio_sms_from')) { ?>
@@ -170,8 +170,13 @@ if (!(isset($standalone) && $standalone)) {
 								<?php echo anchor('sales/return_order/' . $sale_id_raw, lang('sales_return', '', array(), TRUE), array('id' => 'return_order', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
 						<?php } ?>
+
+						<!-- Implementacion del boton factura-->
+						<a href="<?php echo site_url('sales/generate_invoice/'.$sale_id); ?>" class="btn btn-primary" target="_blank">
+   						 Generar Factura</a>
+
 					</ul>
-				</div>
+				</div> 
 			</div>
 			<div class="col-md-6">
 				<div class="buttons-list">
@@ -267,6 +272,7 @@ if (!(isset($standalone) && $standalone)) {
 							<?php
 							}
 							?>
+							 
 
 							<li class="nl2br"><?php echo H($this->Location->get_info_for_key('address', isset($override_location_id) ? $override_location_id : FALSE)); ?></li>
 							<li><?php echo H($this->Location->get_info_for_key('phone', isset($override_location_id) ? $override_location_id : FALSE)); ?></li>
