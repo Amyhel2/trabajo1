@@ -31,7 +31,9 @@ $this->load->view("partial/header_facturacion");
             </div>
 
             <div class="col-md-4" style="text-align: right;">
-              <a href="<?php echo site_url('billing/nuevaSucursal'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
+              <a href="<?php echo site_url('billing/nueva
+              
+              Sucursal'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
                 <span class="ion-plus"></span> Nuevo
               </a>
             </div>
