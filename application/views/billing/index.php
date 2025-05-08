@@ -110,7 +110,7 @@
                     <!-- Anular venta -->
                     <a href="<?php echo site_url('billing/anular_factura/' . $factura['id']); ?>"
                       class="btn btn-danger btn-lg" title="Anular Factura">
-                      <span class="ion-plus"></span> Elim
+                      <span class="ion-plus"></span> Elimimar
                     </a>
                   </td>
                 </tr>
