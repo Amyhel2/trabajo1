@@ -16,7 +16,7 @@ class Billing extends Secure_area
     public $cart;
     public $view_data = array();
     private $api_url;
-    
+
     public function __construct()
     {
         parent::__construct();
@@ -24,9 +24,9 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
         $this->load->helper('url');
         $this->load->library('session');
-
     }
 
+    //LISTAR FACTURAS
     public function index()
     {
         $fechainicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
@@ -53,8 +53,97 @@ class Billing extends Secure_area
             'fechainicio'  => $fechainicio,
             'fechafin'     => $fechafin
         ]);
-        
     }
+
+    public function ver_pdf($idfac)
+    {
+        $payload = [
+            'funcion' => 'generarFacturaPdf',
+            'idfac'   => $idfac
+        ];
+        $ch = curl_init($this->api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        $pdf = curl_exec($ch);
+        header('Content-Type: application/pdf');
+        echo $pdf;
+    }
+
+
+    public function imprimir_rollo($idfac)
+    {
+
+        $this->ver_pdf($idfac);
+    }
+
+
+    public function imprimir_media($idfac)
+    {
+        $this->ver_pdf($idfac);
+    }
+
+    public function ver_xml($idfac)
+    {
+        $payload = [
+            'funcion' => 'generarFacturaXml',
+            'idfac'   => $idfac
+        ];
+        $ch = curl_init($this->api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        $xml = curl_exec($ch);
+        header('Content-Type: application/xml');
+        echo $xml;
+    }
+
+    public function enviar_email($idfac)
+    {
+
+        $factura = $this->call_api([
+            'funcion' => 'listarFacturas',
+            'ids'     => $idfac
+        ])['facturas'][0] ?? null;
+
+        if (!$factura) show_error('Factura no encontrada', 404);
+
+        $payload = [
+            'funcion' => 'enviarMailFactura',
+            'mail'    => $factura['email'] ?? '',
+            'rzs'     => $factura['nombreRazonSocial'],
+            'nit'     => $factura['numeroDocumento'],
+            'cuf'     => $factura['cuf']
+        ];
+
+        $resp = $this->call_api($payload);
+        if (!empty($resp['encontrado'])) {
+            $this->session->set_flashdata('success', 'Email enviado correctamente.');
+        } else {
+            $this->session->set_flashdata('error', 'Error enviando email.');
+        }
+        redirect('billing/index');
+    }
+
+    public function anular_factura($idfac)
+    {
+        $payload = [
+            'funcion' => 'anularFactura',
+            'ids'     => '1',
+            'idf'     => $idfac,
+            'motivo'  => '1'
+        ];
+
+        $resp = $this->call_api($payload);
+        if (!empty($resp) && $resp === true) {
+            $this->session->set_flashdata('success', 'Factura anulada correctamente.');
+        } else {
+            $this->session->set_flashdata('error', 'Error al anular la factura.');
+        }
+        redirect('billing/index');
+    }
+
+    //
 
     public function facturar()
     {
@@ -62,7 +151,8 @@ class Billing extends Secure_area
     }
 
     //CODIGOS
-    public function codigos() {
+    public function codigos()
+    {
         $payload = ['funcion' => 'listarCodigos', 'ids' => '1'];
         $response = $this->call_api_one($payload);
 
@@ -72,19 +162,22 @@ class Billing extends Secure_area
         $this->load->view('billing/codigos', $data);
     }
 
-    public function sincronizar_cufd() {
+    public function sincronizar_cufd()
+    {
         $payload = ['funcion' => 'sincronizarCufd', 'ids' => '1'];
         $this->call_api_one($payload);
         redirect('billing/codigos');
     }
 
-    public function sincronizar_cuis() {
+    public function sincronizar_cuis()
+    {
         $payload = ['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1'];
         $this->call_api($payload);
         redirect('billing/codigos');
     }
 
-    private function call_api_one($payload) {
+    private function call_api_one($payload)
+    {
         $ch = curl_init($this->api_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -93,7 +186,7 @@ class Billing extends Secure_area
         curl_close($ch);
         $decoded = json_decode($result, true);
         return is_array($decoded) ? $decoded : [];
-    } 
+    }
     //
 
     //CONFIGURACION
@@ -114,7 +207,8 @@ class Billing extends Secure_area
     //
 
     //SUCURSALES
-    public function sucursales() {
+    public function sucursales()
+    {
         $suc = $this->call_api([
             'funcion' => 'listarSucursales'
         ]);
@@ -122,23 +216,26 @@ class Billing extends Secure_area
         $this->load->view('billing/sucursales', $data);
     }
 
-    public function sincronizar_sucursales() {
+    public function sincronizar_sucursales()
+    {
         $this->call_api([
             'funcion' => 'listarSucursales'
         ]);
         redirect('billing/sucursales');
     }
 
-    public function sincronizar_puntos() {
+    public function sincronizar_puntos()
+    {
         $this->call_api([
             'funcion'       => 'sincronizarPos',
-            'nroSucursal'   => 0      
+            'nroSucursal'   => 0
         ]);
-    
+
         redirect('billing/sucursales');
     }
 
-    private function call_api(array $payload) {
+    private function call_api(array $payload)
+    {
         $ch = curl_init($this->api_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -148,20 +245,22 @@ class Billing extends Secure_area
         return json_decode($result, true) ?: [];
     }
 
-    public function nuevaSucursal() {
+    public function nuevaSucursal()
+    {
         $this->load->view('billing/crearSucursal');
     }
 
-    public function crearSucursal() {
+    public function crearSucursal()
+    {
 
         $payload = [
-            'funcion'       => 'newSucursal', 
+            'funcion'       => 'newSucursal',
             'sucursal'      => $this->input->post('sucursal'),
             'direccion'     => $this->input->post('direccion'),
             'responsable'   => $this->input->post('responsable'),
             'telefono'      => $this->input->post('telefono'),
             'celular'       => $this->input->post('celular'),
-            'idsucursal'    => ''               
+            'idsucursal'    => ''
         ];
 
         if ($this->input->post('nroSucursal')) {
@@ -170,18 +269,18 @@ class Billing extends Secure_area
         if ($this->input->post('codigoSucursal')) {
             $payload['codigoSucursal'] = $this->input->post('codigoSucursal');
         }
-    
+
         $response = $this->call_api($payload);
-    
+
         if (isset($response['ok']) && $response['ok']) {
             $this->session->set_flashdata('success', 'Sucursal creada correctamente.');
         } else {
             $this->session->set_flashdata('error', 'Error al crear sucursal.');
         }
-    
+
         redirect(site_url('billing/sucursales') . '#sucursales');
     }
-    
+
 
     public function editarSucursal()
     {
@@ -204,7 +303,7 @@ class Billing extends Secure_area
     {
         $data = array(
             'funcion' => 'sincronizarActividades',
-            'codigo' => '123456', 
+            'codigo' => '123456',
         );
 
         $api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
@@ -241,7 +340,7 @@ class Billing extends Secure_area
         redirect('billing');
     }
     //
-    
+
     //EVENTOS 
     public function eventos()
     {
@@ -343,5 +442,4 @@ class Billing extends Secure_area
             'fechafin' => $end_date
         ]);
     }
-
 }

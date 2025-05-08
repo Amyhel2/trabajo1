@@ -55,7 +55,7 @@
               <th>Total Sujeto a Iva</th>
               <th>Emision</th>
               <th>Estado</th>
-              <th>--</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -74,7 +74,45 @@
                   <td><?php echo $factura['montoTotalSujetoIva']; ?></td>
                   <td><?php echo $factura['fechaEmision']; ?></td>
                   <td><?php echo $factura['estado']; ?></td>
-                  <td><?php echo $factura['iconos']; ?></td>
+                  <td>
+
+
+                    <!-- Ver PDF completo -->
+                    <a href="<?php echo site_url('billing/ver_pdf/' . $factura['id']); ?>"
+                      class="btn btn-success btn-lg" title="Ver Factura PDF">
+                      <span class="ion-plus"></span> V/PDF
+                    </a>
+
+                    <!-- Imprimir en rollo -->
+                    <a href="<?php echo site_url('billing/imprimir_rollo/' . $factura['id']); ?>"
+                      class="btn btn-warning btn-lg" title="Imprimir Rollo">
+                      <span class="ion-plus"></span> Imp R
+                    </a>
+
+                    <!-- Imprimir media página -->
+                    <a href="<?php echo site_url('billing/imprimir_media/' . $factura['id']); ?>"
+                      class="btn btn-danger btn-lg" title="Imprimir Media Página">
+                      <span class="ion-plus"></span> Imp 1/2
+                    </a>
+
+                    <!-- Ver XML -->
+                    <a href="<?php echo site_url('billing/ver_xml/' . $factura['id']); ?>"
+                      class="btn btn-success btn-lg" title="Ver XML">
+                      <span class="ion-plus"></span> XML
+                    </a>
+
+                    <!-- Enviar por email -->
+                    <a href="<?php echo site_url('billing/enviar_email/' . $factura['id']); ?>"
+                      class="btn btn-primary btn-lg" title="Enviar Email">
+                      <span class="ion-plus"></span> Email
+                    </a>
+
+                    <!-- Anular venta -->
+                    <a href="<?php echo site_url('billing/anular_factura/' . $factura['id']); ?>"
+                      class="btn btn-danger btn-lg" title="Anular Factura">
+                      <span class="ion-plus"></span> Elim
+                    </a>
+                  </td>
                 </tr>
               <?php endforeach; ?>
             <?php else : ?>
