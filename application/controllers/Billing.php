@@ -26,6 +26,11 @@ class Billing extends Secure_area
         $this->load->library('session');
     }
     
+  public function improllo()
+    {
+
+        $this->load->view('corner');
+    }  
 
     //LISTAR FACTURAS
     public function index()
