@@ -26,11 +26,7 @@ class Billing extends Secure_area
         $this->load->library('session');
     }
     
-    public function reserva()
-    {
-        $this->load->view('mir');
-    }
-
+    
     //LISTAR FACTURAS
     public function index()
     {
