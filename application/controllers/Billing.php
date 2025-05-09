@@ -26,7 +26,6 @@ class Billing extends Secure_area
         $this->load->library('session');
     }
     
-    
     //LISTAR FACTURAS
     public function index()
     {
@@ -143,7 +142,6 @@ class Billing extends Secure_area
         }
         redirect('billing/index');
     }
-
     //
 
     public function facturar()
@@ -443,4 +441,47 @@ class Billing extends Secure_area
             'fechafin' => $end_date
         ]);
     }
+
+    public function elaborar_factura($sale_id)
+{
+    $this->load->model('Sale');
+    $this->load->model('Customer');
+
+    $sale_info = $this->Sale->get_info($sale_id)->row_array();
+    $sale_items = $this->Sale->get_sale_items($sale_id);
+
+    $customer_id = $sale_info['customer_id'];
+    $customer_info = $this->Customer->get_info($customer_id)->row_array();
+
+    $productos = [];
+    foreach ($sale_items as $item)
+    {
+        $productos[] = [
+            "actividad" => "474000",
+            "codigosin" => "99100",
+            "codigop" => $item['item_id'],
+            "producto" => $item['name'],
+            "idproducto" => $item['item_id'],
+            "preciounitario" => $item['unit_price'],
+            "cantidad" => $item['quantity_purchased'],
+            "unidadmedida" => "57",
+            "preciobs" => $item['subtotal'],
+            "descuento" => $item['discount']
+        ];
+    }
+
+    $data = [
+        "productos" => $productos,
+        "subtotal" => $sale_info['subtotal'],
+        "total" => $sale_info['total'],
+        "descuento_total" => $sale_info['discount_amount'],
+        "razon_social" => $customer_info['company_name'],
+        "nit" => $customer_info['account_number'],
+        "email" => $customer_info['email'],
+        "tipo_documento" => "1" // puedes ajustar
+    ];
+
+    $this->load->view("billing/elaborar_factura", $data);
+}
+
 }
