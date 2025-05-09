@@ -25,6 +25,12 @@ class Billing extends Secure_area
         $this->load->helper('url');
         $this->load->library('session');
     }
+    public function visme()
+    {
+        $this->load->view('billing/red');
+    }
+
+    
 
     //LISTAR FACTURAS
     public function index()
