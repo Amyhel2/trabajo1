@@ -25,7 +25,7 @@ class Billing extends Secure_area
         $this->load->helper('url');
         $this->load->library('session');
     }
-    
+
     //LISTAR FACTURAS
     public function index()
     {
@@ -442,46 +442,57 @@ class Billing extends Secure_area
         ]);
     }
 
-    public function elaborar_factura($sale_id)
+    //ELABORAR FACTURA
+   public function elaborar_factura($sale_id)
 {
     $this->load->model('Sale');
     $this->load->model('Customer');
+    $this->load->model('Item');
 
-    $sale_info = $this->Sale->get_info($sale_id)->row_array();
+    $sale = $this->Sale->get_info($sale_id)->row_array();
     $sale_items = $this->Sale->get_sale_items($sale_id);
 
-    $customer_id = $sale_info['customer_id'];
-    $customer_info = $this->Customer->get_info($customer_id)->row_array();
-
+    // Preparar productos
     $productos = [];
-    foreach ($sale_items as $item)
-    {
+    foreach ($sale_items as $item) {
+        $item_info = $this->Item->get_info($item['item_id'])->row_array();
+
         $productos[] = [
-            "actividad" => "474000",
-            "codigosin" => "99100",
-            "codigop" => $item['item_id'],
-            "producto" => $item['name'],
-            "idproducto" => $item['item_id'],
-            "preciounitario" => $item['unit_price'],
+            "nombre" => $item_info['name'],
             "cantidad" => $item['quantity_purchased'],
-            "unidadmedida" => "57",
-            "preciobs" => $item['subtotal'],
-            "descuento" => $item['discount']
+            "precio_unitario" => $item['item_unit_price'],
+            "subtotal" => $item['subtotal'],
+            "descuento" => $item['discount_percent']
+        ];
+    }
+
+    // Datos del cliente si existe
+    $cliente_info = [
+        'razon_social' => '',
+        'nit' => '',
+        'email' => ''
+    ];
+
+    if ($sale['customer_id'] && $sale['customer_id'] != -1) {
+        $customer = $this->Customer->get_info($sale['customer_id'])->row_array();
+        $cliente_info = [
+            'razon_social' => $customer['company_name'],
+            'nit' => $customer['account_number'],
+            'email' => $customer['email']
         ];
     }
 
     $data = [
-        "productos" => $productos,
-        "subtotal" => $sale_info['subtotal'],
-        "total" => $sale_info['total'],
-        "descuento_total" => $sale_info['discount_amount'],
-        "razon_social" => $customer_info['company_name'],
-        "nit" => $customer_info['account_number'],
-        "email" => $customer_info['email'],
-        "tipo_documento" => "1" // puedes ajustar
+        'productos' => $productos,
+        'subtotal' => $sale['subtotal'],
+        'total' => $sale['total'],
+        'razon_social' => $cliente_info['razon_social'],
+        'nit' => $cliente_info['nit'],
+        'email' => $cliente_info['email']
     ];
 
-    $this->load->view("billing/elaborar_factura", $data);
+    $this->load->view('billing/elaborar_factura', $data);
 }
+
 
 }
