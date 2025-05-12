@@ -138,7 +138,7 @@ if (!(isset($standalone) && $standalone)) {
 							<li>
 								<?php echo anchor('sales/email_receipt/' . $sale_id_raw, lang('common_email_receipt', '', array(), TRUE), array('id' => 'email_receipt', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
-   
+
 						<?php } ?>
 
 						<?php if ($sale_id_raw != lang('sales_test_mode_transaction', '', array(), TRUE) && !empty($customer_phone) && $this->Location->get_info_for_key('twilio_sms_from')) { ?>
@@ -165,20 +165,19 @@ if (!(isset($standalone) && $standalone)) {
 							<?php } ?>
 						<?php } ?>
 
-						<?php if ($this->Employee->has_module_action_permission('sales', 'process_returns', $this->Employee->get_logged_in_employee_info()->person_id)) {?>
+						<?php if ($this->Employee->has_module_action_permission('sales', 'process_returns', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
 							<li>
 								<?php echo anchor('sales/return_order/' . $sale_id_raw, lang('sales_return', '', array(), TRUE), array('id' => 'return_order', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
 						<?php } ?>
 
-						<!--Implementacion del boton factura-->
-						<a href="<?= site_url("billing/elaborar_factura/ . $sale_id_raw") ?>" class="btn btn-primary">
-  <i class="fa fa-file-invoice"></i> Generar Factura
-</a>
-
+						<!--Implementacion del boton factura en la venta-->
+						<a href="<?= site_url("billing/elaborar_factura/$sale_id_raw") ?>" class="btn btn-primary">
+							<i class="fa fa-file-invoice"></i> Generar Factura
+						</a>
 
 					</ul>
-				</div> 
+				</div>
 			</div>
 			<div class="col-md-6">
 				<div class="buttons-list">
@@ -196,18 +195,18 @@ if (!(isset($standalone) && $standalone)) {
 							<li>
 								<button class="btn btn-primary btn-lg hidden-print" id="print_button" onclick="print_receipt()"> <?php echo lang('common_print', '', array(), TRUE); ?> </button>
 							</li>
-							<?php if ($this->Employee->has_module_action_permission('sales', 'add_remove_amounts_from_cash_drawer', $this->Employee->get_logged_in_employee_info()->person_id)) {?>
-							<li>
-								<?php echo anchor_popup(site_url('sales/open_drawer'), '<i class="ion-android-open"></i> ' . lang('common_pop_open_cash_drawer', '', array(), TRUE), array('class' => 'btn btn-primary btn-lg hidden-print', 'target' => '_blank')); ?>
-							</li>
+							<?php if ($this->Employee->has_module_action_permission('sales', 'add_remove_amounts_from_cash_drawer', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
+								<li>
+									<?php echo anchor_popup(site_url('sales/open_drawer'), '<i class="ion-android-open"></i> ' . lang('common_pop_open_cash_drawer', '', array(), TRUE), array('class' => 'btn btn-primary btn-lg hidden-print', 'target' => '_blank')); ?>
+								</li>
 							<?php } ?>
 							<li>
 								<button class="btn btn-primary btn-lg hidden-print" id="new_sale_button_1" onclick="window.location='<?php echo site_url('sales'); ?>'"> <?php echo lang('sales_new_sale', '', array(), TRUE); ?> </button>
 							</li>
 
-							<?php if($this->config->item('use_saudi_tax_config')){ ?>
+							<?php if ($this->config->item('use_saudi_tax_config')) { ?>
 								<li>
-									<?php echo anchor('invoices/zatca_invoice/', "ZATCA ". lang('reports_invoices_reports') , array('id' => 'clone', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
+									<?php echo anchor('invoices/zatca_invoice/', "ZATCA " . lang('reports_invoices_reports'), array('id' => 'clone', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 								</li>
 							<?php } ?>
 
@@ -227,6 +226,7 @@ if (!(isset($standalone) && $standalone)) {
 	</div>
 <?php
 } ?>
+
 <div <?php echo $this->config->item('uppercase_receipts') ? 'style="text-transform: uppercase !important"' : ''; ?>class="row manage-table receipt_<?php echo $this->config->item('receipt_text_size') ? $this->config->item('receipt_text_size') : 'small'; ?>" id="receipt_wrapper">
 	<div class="col-md-12" id="receipt_wrapper_inner">
 		<div class="panel panel-piluku">
@@ -249,32 +249,32 @@ if (!(isset($standalone) && $standalone)) {
 
 							<?php if ($this->Location->count_all() > 1) { ?>
 								<li class="company-title"><?php echo H($company); ?></li>
-								<?php if(!$this->config->item('hide_location_name_on_receipt')){ ?>
+								<?php if (!$this->config->item('hide_location_name_on_receipt')) { ?>
 									<li><?php echo H($this->Location->get_info_for_key('name', isset($override_location_id) ? $override_location_id : FALSE)); ?></li>
 								<?php } ?>
 							<?php } else {
 							?>
 								<li class="company-title"><?php echo H($company); ?></li>
-							<?php
+								<?php
 							}
 
-							if(!($this->config->item('use_saudi_tax_config') && isset($zatca_invoice))){
+							if (!($this->config->item('use_saudi_tax_config') && isset($zatca_invoice))) {
 								if ($tax_id) {
-							?>
+								?>
 									<li class="tax-id-title"><?php echo lang('common_tax_id') . ': ' . H($tax_id); ?></li>
-							<?php
+								<?php
 								}
-							}else{
-							?>
+							} else {
+								?>
 								<li class="tax-id-title"><?php echo lang('common_tax_id') . ': ' . H($location_zatca_config['seller_tax_id']); ?></li>
-								<?php if(substr($zatca_invoice['invoice_subtype'], 0, 2) == "01"){ ?>
+								<?php if (substr($zatca_invoice['invoice_subtype'], 0, 2) == "01") { ?>
 									<li class="tax-id-title"><?php echo "Seller ID" . ': ' . H($location_zatca_config['seller_id']); ?></li>
 									<li class="tax-id-title"><?php echo "VAT ID" . ': ' . H($location_zatca_config['csr_organization_identifier']); ?></li>
 								<?php } ?>
 							<?php
 							}
 							?>
-							 
+
 
 							<li class="nl2br"><?php echo H($this->Location->get_info_for_key('address', isset($override_location_id) ? $override_location_id : FALSE)); ?></li>
 							<li><?php echo H($this->Location->get_info_for_key('phone', isset($override_location_id) ? $override_location_id : FALSE)); ?></li>
@@ -292,25 +292,25 @@ if (!(isset($standalone) && $standalone)) {
 									<br>
 								<?php } ?>
 								<?php
-									if($this->config->item('use_saudi_tax_config') && isset($zatca_invoice)){
-										if(substr($zatca_invoice['invoice_subtype'], 0, 2) == "01"){
-											if($zatca_invoice['invoice_type_code'] == '388' ){
-												echo "<span>Type: Standard (BTB)</span><br/>";
-											} else if($zatca_invoice['invoice_type_code'] == '383'){
-												echo "<span>Type: Debit Note (BTB)</span><br/>";
-											} else if($zatca_invoice['invoice_type_code'] == '381'){
-												echo "<span>Type: Credit Note (BTB)</span><br/>";
-											}
-										}else if(substr($zatca_invoice['invoice_subtype'], 0, 2) == "02"){
-											if($zatca_invoice['invoice_type_code'] == '388' ){
-												echo "<span>Type: Simplified (BTC)</span><br/>";
-											} else if($zatca_invoice['invoice_type_code'] == '383'){
-												echo "<span>Type: Debit Note (BTC)</span><br/>";
-											} else if($zatca_invoice['invoice_type_code'] == '381'){
-												echo "<span>Type: Credit Note (BTC)</span><br/>";
-											}
+								if ($this->config->item('use_saudi_tax_config') && isset($zatca_invoice)) {
+									if (substr($zatca_invoice['invoice_subtype'], 0, 2) == "01") {
+										if ($zatca_invoice['invoice_type_code'] == '388') {
+											echo "<span>Type: Standard (BTB)</span><br/>";
+										} else if ($zatca_invoice['invoice_type_code'] == '383') {
+											echo "<span>Type: Debit Note (BTB)</span><br/>";
+										} else if ($zatca_invoice['invoice_type_code'] == '381') {
+											echo "<span>Type: Credit Note (BTB)</span><br/>";
+										}
+									} else if (substr($zatca_invoice['invoice_subtype'], 0, 2) == "02") {
+										if ($zatca_invoice['invoice_type_code'] == '388') {
+											echo "<span>Type: Simplified (BTC)</span><br/>";
+										} else if ($zatca_invoice['invoice_type_code'] == '383') {
+											echo "<span>Type: Debit Note (BTC)</span><br/>";
+										} else if ($zatca_invoice['invoice_type_code'] == '381') {
+											echo "<span>Type: Credit Note (BTC)</span><br/>";
 										}
 									}
+								}
 								?>
 								<strong><?php echo H($transaction_time) ?></strong>
 							</li>
@@ -602,8 +602,8 @@ if (!(isset($standalone) && $standalone)) {
 
 					foreach (array_reverse($cart_items, true) as $line1 => $item) {
 
-						if($this->config->item('hide_repair_items_on_receipt')){
-							if($item->is_repair_item == 1){
+						if ($this->config->item('hide_repair_items_on_receipt')) {
+							if ($item->is_repair_item == 1) {
 								continue;
 							}
 						}
@@ -884,16 +884,16 @@ if (!(isset($standalone) && $standalone)) {
 									$can_display_image = $this->config->item('show_images_on_receipt') && $item->main_image_id;
 									if ($can_display_image) {
 									?>
-									<div class="row">
-										<div class="invoice-desc">
-											<?php
-											echo img(array(
-												'width' => ($this->config->item('show_images_on_receipt_width_percent') ? $this->config->item('show_images_on_receipt_width_percent') : '25') . '%',
-												'src' => secure_app_file_url($item->main_image_id)
-											));
-											?>
+										<div class="row">
+											<div class="invoice-desc">
+												<?php
+												echo img(array(
+													'width' => ($this->config->item('show_images_on_receipt_width_percent') ? $this->config->item('show_images_on_receipt_width_percent') : '25') . '%',
+													'src' => secure_app_file_url($item->main_image_id)
+												));
+												?>
+											</div>
 										</div>
-									</div>
 									<?php } ?>
 								</td>
 							</tr>
@@ -1025,26 +1025,26 @@ if (!(isset($standalone) && $standalone)) {
 					<?php } ?>
 
 					<?php if ($this->config->item('show_total_at_top_on_receipt')) { ?>
-					<div class="row">
-						<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-							<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE); ?></div>
-						</div>
-						<div class="col-md-2 col-sm-2 col-xs-4">
-							<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
+						<div class="row">
+							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
+								<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE); ?></div>
+							</div>
+							<div class="col-md-2 col-sm-2 col-xs-4">
+								<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
 
 
-								<?php if (isset($exchange_name) && $exchange_name) { ?>
-									<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_as_exchange($cart, round_to_nearest_05($total + $tip_amount)) : to_currency_as_exchange($cart, $total + $tip_amount); ?>
-								<?php } else {  ?>
-									<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency(round_to_nearest_05($total + $tip_amount)) : to_currency($total + $tip_amount); ?>
-								<?php } ?>
+									<?php if (isset($exchange_name) && $exchange_name) { ?>
+										<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_as_exchange($cart, round_to_nearest_05($total + $tip_amount)) : to_currency_as_exchange($cart, $total + $tip_amount); ?>
+									<?php } else {  ?>
+										<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency(round_to_nearest_05($total + $tip_amount)) : to_currency($total + $tip_amount); ?>
+									<?php } ?>
 
+								</div>
 							</div>
 						</div>
-					</div>
-					
+
 					<?php } ?>
-					
+
 					<div class="row">
 						<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
 							<div class="invoice-footer-heading"><?php echo lang('common_sub_total', '', array(), TRUE); ?></div>
@@ -1062,7 +1062,7 @@ if (!(isset($standalone) && $standalone)) {
 						</div>
 					</div>
 					<?php
-					if ($is_on_device_tip_processor && (double)$tip_amount > 0) {
+					if ($is_on_device_tip_processor && (float)$tip_amount > 0) {
 					?>
 						<div class="row">
 							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
@@ -1102,7 +1102,7 @@ if (!(isset($standalone) && $standalone)) {
 						<?php
 					} else {
 						$total_tax = 0;
-						foreach ($taxes as $name => $value) { 
+						foreach ($taxes as $name => $value) {
 							$total_tax += $value;
 						?>
 							<div class="row">
@@ -1124,79 +1124,76 @@ if (!(isset($standalone) && $standalone)) {
 					<?php
 						}
 						$total_tax_amount = to_currency($total_tax);
-
 					}
 					?>
-					
-					
+
+
 					<?php if (!$this->config->item('show_total_at_top_on_receipt')) { ?>
-					<div class="row">
-						<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-							<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE); ?></div>
-						</div>
-						<div class="col-md-2 col-sm-2 col-xs-4">
-							<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
+						<div class="row">
+							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
+								<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE); ?></div>
+							</div>
+							<div class="col-md-2 col-sm-2 col-xs-4">
+								<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
 
 
-								<?php if (isset($exchange_name) && $exchange_name) { ?>
-									<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_as_exchange($cart, round_to_nearest_05($total + $tip_amount)) : to_currency_as_exchange($cart, $total + $tip_amount); ?>
-								<?php } else {  ?>
-									<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency(round_to_nearest_05($total + $tip_amount)) : to_currency($total + $tip_amount); ?>
-								<?php } ?>
+									<?php if (isset($exchange_name) && $exchange_name) { ?>
+										<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_as_exchange($cart, round_to_nearest_05($total + $tip_amount)) : to_currency_as_exchange($cart, $total + $tip_amount); ?>
+									<?php } else {  ?>
+										<?php echo $total_invoice_amount = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency(round_to_nearest_05($total + $tip_amount)) : to_currency($total + $tip_amount); ?>
+									<?php } ?>
 
+								</div>
 							</div>
 						</div>
-					</div>
-					
+
 					<?php } ?>
-					
-					
-					
+
+
+
 					<?php
 					$exchange_rates = $this->Appconfig->get_exchange_rates()->result_array();
-					if ($this->config->item('show_exchanged_totals_on_receipt') && count($exchange_rates) && !$exchange_name) 
-					{
-						foreach ($exchange_rates as $exchange_row) 
-						{
-							?>
-					<div class="row">
-						<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-							<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE).' '.$exchange_row['currency_code_to']; ?></div>
-						</div>
-					<div class="col-md-2 col-sm-2 col-xs-4">
-						<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
-						<?php 
-						
-						$total_for_exchange = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_no_money(round_to_nearest_05($total + $tip_amount)) : to_currency_no_money($total + $tip_amount);
-						echo $exchange_row['currency_symbol'].''.to_currency_no_money($total_for_exchange*$exchange_row['exchange_rate']);?>
-						
-						</div>
-						</div>
-					</div>
-					
+					if ($this->config->item('show_exchanged_totals_on_receipt') && count($exchange_rates) && !$exchange_name) {
+						foreach ($exchange_rates as $exchange_row) {
+					?>
+							<div class="row">
+								<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
+									<div class="invoice-footer-heading"><?php echo lang('common_total', '', array(), TRUE) . ' ' . $exchange_row['currency_code_to']; ?></div>
+								</div>
+								<div class="col-md-2 col-sm-2 col-xs-4">
+									<div class="invoice-footer-value invoice-total" style="font-size: 150%;font-weight: bold;;">
+										<?php
+
+										$total_for_exchange = $this->config->item('round_cash_on_sales') && $is_sale_cash_payment ?  to_currency_no_money(round_to_nearest_05($total + $tip_amount)) : to_currency_no_money($total + $tip_amount);
+										echo $exchange_row['currency_symbol'] . '' . to_currency_no_money($total_for_exchange * $exchange_row['exchange_rate']); ?>
+
+									</div>
+								</div>
+							</div>
+
 					<?php
 						}
 					}
 					?>
-					
+
 					<?php
 					// Check Condition for Weight from Config file 
-					if(!$this->config->item('remove_weight_from_receipt')) {
-					if ($cart->get_total_weight() > 0)
+					if (!$this->config->item('remove_weight_from_receipt')) {
+						if ($cart->get_total_weight() > 0)
 					?>
-					<div class="row">
-						<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-							<div class="invoice-footer-heading"><?php echo lang('items_weight', '', array(), TRUE); ?></div>
-						</div>
-						<div class="col-md-2 col-sm-2 col-xs-4">
-							<div class="invoice-footer-value invoice-total">
-								<?php echo $cart->get_total_weight();?>
+						<div class="row">
+							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
+								<div class="invoice-footer-heading"><?php echo lang('items_weight', '', array(), TRUE); ?></div>
+							</div>
+							<div class="col-md-2 col-sm-2 col-xs-4">
+								<div class="invoice-footer-value invoice-total">
+									<?php echo $cart->get_total_weight(); ?>
+								</div>
 							</div>
 						</div>
-					</div>
 					<?php } ?>
-					
-					
+
+
 					<?php
 					if ($this->config->item('show_total_discount_on_receipt') && !$store_account_payment && $cart->get_total_discount()) { ?>
 						<div class="row">
@@ -1211,7 +1208,7 @@ if (!(isset($standalone) && $standalone)) {
 					<?php
 					}
 					?>
-					
+
 
 					<div class="row">
 						<?php if ($number_of_items_sold) { ?>
@@ -1238,10 +1235,9 @@ if (!(isset($standalone) && $standalone)) {
 					<?php
 					foreach ($payments as $payment_id => $payment) {
 						$pcounter = 0;
-						
+
 						$tip_amount_on_payment = 0;
-						if (!$is_on_device_tip_processor)
-						{
+						if (!$is_on_device_tip_processor) {
 							if ($pcounter == 0) {
 								$tip_amount_on_payment = $tip_amount;
 							}
@@ -1451,39 +1447,38 @@ if (!(isset($standalone) && $standalone)) {
 
 
 					<?php if ($this->config->item('taxes_summary_on_receipt')) { ?>
-						
+
 						<div class="row">
-				            <div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-								<?php 
-								if($this->config->item('override_symbol_taxable_summary')){
-								?>
-				                <div class="invoice-footer-heading"><?php echo $this->config->item('override_symbol_taxable_summary'); ?></div>
+							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
 								<?php
-								}else{
+								if ($this->config->item('override_symbol_taxable_summary')) {
 								?>
-				                <div class="invoice-footer-heading"><?php echo lang('common_taxable','',array(),TRUE); ?></div>
-								<?php 
+									<div class="invoice-footer-heading"><?php echo $this->config->item('override_symbol_taxable_summary'); ?></div>
+								<?php
+								} else {
+								?>
+									<div class="invoice-footer-heading"><?php echo lang('common_taxable', '', array(), TRUE); ?></div>
+								<?php
 								}
 								?>
-				            </div>
-				            <div class="col-md-2 col-sm-2 col-xs-4">
-				                <div class="invoice-footer-value">
-									<?php echo to_currency($taxable_subtotal);?>
+							</div>
+							<div class="col-md-2 col-sm-2 col-xs-4">
+								<div class="invoice-footer-value">
+									<?php echo to_currency($taxable_subtotal); ?>
 								</div>
-				            </div>
-				        </div>
+							</div>
+						</div>
 
 						<?php if ($this->config->item('taxes_summary_details_on_receipt')) { ?>
 							<br />
 							<?php
-							foreach($taxes as $tax_name => $tax_value)
-							{
+							foreach ($taxes as $tax_name => $tax_value) {
 								$tax_subtotal = $cart->get_tax_subtotal($tax_name);
 								$tax_line_total = $tax_value + $tax_subtotal;
 							?>
 								<div class="row">
 									<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-										<div class="invoice-footer-heading"><?php echo $tax_name.' '.lang('common_sub_total','',array(),TRUE);?></div>
+										<div class="invoice-footer-heading"><?php echo $tax_name . ' ' . lang('common_sub_total', '', array(), TRUE); ?></div>
 									</div>
 									<div class="col-md-2 col-sm-2 col-xs-4">
 										<div class="invoice-footer-value">
@@ -1515,28 +1510,28 @@ if (!(isset($standalone) && $standalone)) {
 									</div>
 								</div>
 								<br /><br />
-						<?php	
+						<?php
 							}
 						}
 						?>
 
 						<div class="row">
-				            <div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
-								<?php 
-								if($this->config->item('override_symbol_non_taxable_summary')){
-								?>
-				                <div class="invoice-footer-heading"><?php echo $this->config->item('override_symbol_non_taxable_summary'); ?></div>
+							<div class="col-md-offset-4 col-sm-offset-4 col-md-6 col-sm-6 col-xs-8">
 								<?php
-								}else{
+								if ($this->config->item('override_symbol_non_taxable_summary')) {
 								?>
-				                <div class="invoice-footer-heading"><?php echo lang('reports_non_taxable','',array(),TRUE); ?></div>
-								<?php 
+									<div class="invoice-footer-heading"><?php echo $this->config->item('override_symbol_non_taxable_summary'); ?></div>
+								<?php
+								} else {
+								?>
+									<div class="invoice-footer-heading"><?php echo lang('reports_non_taxable', '', array(), TRUE); ?></div>
+								<?php
 								}
 								?>
-				            </div>
-				            <div class="col-md-2 col-sm-2 col-xs-4">
-				                <div class="invoice-footer-value">
-									<?php echo to_currency($non_taxable_subtotal);?>
+							</div>
+							<div class="col-md-2 col-sm-2 col-xs-4">
+								<div class="invoice-footer-value">
+									<?php echo to_currency($non_taxable_subtotal); ?>
 								</div>
 							</div>
 
@@ -1544,9 +1539,9 @@ if (!(isset($standalone) && $standalone)) {
 						</div>
 
 					<?php } ?>
-					
-					<?php 
-					$amount_change-=$tip_amount;
+
+					<?php
+					$amount_change -= $tip_amount;
 					if ($amount_change >= 0 && !$store_account_payment) { ?>
 						<div class="row">
 							<div class="col-md-offset-8 col-sm-offset-8 col-xs-offset-2 col-md-2 col-sm-2 col-xs-6">
@@ -1651,56 +1646,54 @@ if (!(isset($standalone) && $standalone)) {
 						<?php if ($this->config->item('show_qr_code_for_sale') && !$store_account_payment) { ?>
 							<?php if (!(isset($standalone) && $standalone)) { ?>
 								<div id='qrcode' class="invoice-policy">
-									<?php 
-										$qrcode = '';
-										if ($this->config->item('qr_code_format') == 'sale_summary_info') { 
-											$qrcode_info = array(
-												lang('common_company').': '.$this->config->item('company'),
-												lang('common_tax_id').': '.$this->config->item('tax_id'),
-												lang('sales_invoice_date').': '.H($transaction_time),
-												lang('common_total', '', array(), TRUE).': '.strip_tags($total_invoice_amount),
-												lang('common_tax', '', array(), TRUE).': '.strip_tags($total_tax_amount)
-											);
+									<?php
+									$qrcode = '';
+									if ($this->config->item('qr_code_format') == 'sale_summary_info') {
+										$qrcode_info = array(
+											lang('common_company') . ': ' . $this->config->item('company'),
+											lang('common_tax_id') . ': ' . $this->config->item('tax_id'),
+											lang('sales_invoice_date') . ': ' . H($transaction_time),
+											lang('common_total', '', array(), TRUE) . ': ' . strip_tags($total_invoice_amount),
+											lang('common_tax', '', array(), TRUE) . ': ' . strip_tags($total_tax_amount)
+										);
 
-											$qrcode = implode(",".PHP_EOL, $qrcode_info);
-
-										} else if ($this->config->item('qr_code_format') == 'saudi_arabia_digital_receipt'){
-											if( $this->config->item('use_saudi_tax_config') && isset($zatca_invoice)){
-												$qrcode = $zatca_invoice['qr_code'];
-												echo "<div id='qrcode' class='invoice-policy'><img src='".site_url('qrcodegenerator/index?qrcode=' . urlencode($qrcode)) . "' alt='$sale_id'/></div>";
-											} else{
+										$qrcode = implode("," . PHP_EOL, $qrcode_info);
+									} else if ($this->config->item('qr_code_format') == 'saudi_arabia_digital_receipt') {
+										if ($this->config->item('use_saudi_tax_config') && isset($zatca_invoice)) {
+											$qrcode = $zatca_invoice['qr_code'];
+											echo "<div id='qrcode' class='invoice-policy'><img src='" . site_url('qrcodegenerator/index?qrcode=' . urlencode($qrcode)) . "' alt='$sale_id'/></div>";
+										} else {
 
 											require_once(APPPATH . "libraries/Tlvstr.php");
-											
+
 											$qrdata = array(
-												'seller_name' => $this->config->item('company') ? $this->config->item('company') : '', 
+												'seller_name' => $this->config->item('company') ? $this->config->item('company') : '',
 												'tax_number' => $this->config->item('tax_id') ? $this->config->item('tax_id') : '',
-												'invoice_date' => date(DATE_ISO8601,strtotime($transaction_time)),
+												'invoice_date' => date(DATE_ISO8601, strtotime($transaction_time)),
 												'invoice_total_amount' => make_currency_no_money(strip_tags($total_invoice_amount)),
 												'invoice_tax_amount' => make_currency_no_money(strip_tags($total_tax_amount)),
 											);
-											
+
 											$tlvstr = new Tlvstr($qrdata);
 											$qrcode = $tlvstr->generate();
-											}
+										}
+									} else {
+										require_once(APPPATH . "libraries/hashids/vendor/autoload.php");
 
-										} else { 
-											require_once(APPPATH . "libraries/hashids/vendor/autoload.php");
-
-											$hashids = new Hashids\Hashids(base_url());
-											$sms_id = $hashids->encode($sale_id_raw);
-											$qrcode = site_url('r/' . $sms_id);
-										} 
+										$hashids = new Hashids\Hashids(base_url());
+										$sms_id = $hashids->encode($sale_id_raw);
+										$qrcode = site_url('r/' . $sms_id);
+									}
 									?>
 
-									<?php echo "<img src='" .site_url('qrcodegenerator/index?qrcode=' . urlencode($qrcode)) . "' alt='$sale_id'/>"; ?>
+									<?php echo "<img src='" . site_url('qrcodegenerator/index?qrcode=' . urlencode($qrcode)) . "' alt='$sale_id'/>"; ?>
 									<p style="font-size: 12px; font-family: 'themify';"> <?php echo $sale_id; ?> </p>
 
 								</div>
 
 							<?php } ?>
 						<?php } ?>
-						
+
 						<?php
 						$this->load->model('Price_rule');
 						$coupons = $this->Price_rule->get_coupons_for_receipt($total);
@@ -1843,19 +1836,18 @@ if (!(isset($standalone) && $standalone)) {
 </div>
 
 <?php
-if ($this->config->item('allow_reorder_sales_receipt')) 
-{
+if ($this->config->item('allow_reorder_sales_receipt')) {
 ?>
-<style>
-	#receipt-draggable tbody {
-		cursor: move;
-		width: 100%;
-	}
+	<style>
+		#receipt-draggable tbody {
+			cursor: move;
+			width: 100%;
+		}
 
-	.invoice-head {
-		cursor: pointer;
-	}
-</style>
+		.invoice-head {
+			cursor: pointer;
+		}
+	</style>
 <?php
 }
 ?>
@@ -1914,218 +1906,217 @@ if ($this->config->item('allow_reorder_sales_receipt'))
 
 			return false;
 		});
-		
-	<?php
-	if ($this->config->item('allow_reorder_sales_receipt')) 
-	{
-		if (!$this->agent->is_mobile() && !$this->agent->is_tablet()) 
-		{
+
+		<?php
+		if ($this->config->item('allow_reorder_sales_receipt')) {
+			if (!$this->agent->is_mobile() && !$this->agent->is_tablet()) {
 		?>
-		$("#receipt-draggable").sortable({
-			items: 'tbody',
-			cursor: 'move',
-			axis: 'y',
-			dropOnEmpty: false,
-			start: function(e, ui) {
-				ui.item.addClass("selected");
-				var td_width = [];
-				var td_height = [];
-				for( let i = 0; i < $("#receipt-draggable tbody").length; i ++){
-					if($($("#receipt-draggable tbody")[i]).hasClass('selected') || $($("#receipt-draggable tbody")[i]).hasClass('ui-sortable-placeholder')){
-						continue;
-					}else{
-						td_height = $($("#receipt-draggable tbody")[i]).height();
-						for(let j = 0; j<$($("#receipt-draggable tbody")[i]).find(".invoice-item-details td").length; j++){
-							td_width.push($($($("#receipt-draggable tbody")[i]).find(".invoice-item-details td")[j]).width());
+				$("#receipt-draggable").sortable({
+					items: 'tbody',
+					cursor: 'move',
+					axis: 'y',
+					dropOnEmpty: false,
+					start: function(e, ui) {
+						ui.item.addClass("selected");
+						var td_width = [];
+						var td_height = [];
+						for (let i = 0; i < $("#receipt-draggable tbody").length; i++) {
+							if ($($("#receipt-draggable tbody")[i]).hasClass('selected') || $($("#receipt-draggable tbody")[i]).hasClass('ui-sortable-placeholder')) {
+								continue;
+							} else {
+								td_height = $($("#receipt-draggable tbody")[i]).height();
+								for (let j = 0; j < $($("#receipt-draggable tbody")[i]).find(".invoice-item-details td").length; j++) {
+									td_width.push($($($("#receipt-draggable tbody")[i]).find(".invoice-item-details td")[j]).width());
+								}
+								break;
+							}
 						}
-						break;
+
+						$(".ui-sortable-placeholder").html("<tr><td>&nbsp;</td></tr>");
+						$(".ui-sortable-placeholder").height(td_height + 'px');
+
+						for (let k = 0; k < $($("#register tbody.selected tr")[0]).find('td').length; k++) {
+							$($($("#register tbody.selected tr")[0]).find('td')[k]).width(td_width[k] + 'px');
+						}
+
+					},
+					stop: function(e, ui) {
+
+						for (let k = 0; k < $($("#register tbody.selected tr")[0]).find('td').length; k++) {
+							$($($("#register tbody.selected tr")[0]).find('td')[k]).attr('style', '');
+						}
+						ui.item.removeClass("selected");
+
+						updateItemOrder();
+					},
+					sort: function(e) {
+						$(".ui-sortable-helper").css("width", $("table#register").width() + 'px');
+						$(".ui-sortable-helper tr").css("width", $("table#register").width() + 'px');
 					}
-				}
-
-				$(".ui-sortable-placeholder").html("<tr><td>&nbsp;</td></tr>");
-				$(".ui-sortable-placeholder").height(td_height+'px');
-
-				for(let k=0; k<$($("#register tbody.selected tr")[0]).find('td').length; k++){
-					$($($("#register tbody.selected tr")[0]).find('td')[k]).width(td_width[k]+'px');
-				}
-
-			},
-			stop: function(e, ui) {
-
-				for(let k=0; k<$($("#register tbody.selected tr")[0]).find('td').length; k++){
-					$($($("#register tbody.selected tr")[0]).find('td')[k]).attr('style','');
-				}
-				ui.item.removeClass("selected");
-
-				updateItemOrder();
-			},
-			sort:function(e){
-				$(".ui-sortable-helper").css("width", $("table#register").width()+'px');
-				$(".ui-sortable-helper tr").css("width", $("table#register").width()+'px');
+				});
+			<?php
 			}
-		});
-		<?php 
-		}
-		?>
-		function updateItemOrder() {
-			var length = $("#receipt-draggable tbody").length;
-			var item_lines = [];
-			for (let i = 0; i < length; i++) {
-				let item_id = $($("#receipt-draggable tbody")[i]).data('item-id');
-				let sale_id = $($("#receipt-draggable tbody")[i]).data('sale-id');
-				let item_class = $($("#receipt-draggable tbody")[i]).data('item-class');
-				item_lines.push({
-					item_id: item_id,
-					sale_id: sale_id,
-					item_class: item_class,
-					receipt_line_sort_order: (length - i)
+			?>
+
+			function updateItemOrder() {
+				var length = $("#receipt-draggable tbody").length;
+				var item_lines = [];
+				for (let i = 0; i < length; i++) {
+					let item_id = $($("#receipt-draggable tbody")[i]).data('item-id');
+					let sale_id = $($("#receipt-draggable tbody")[i]).data('sale-id');
+					let item_class = $($("#receipt-draggable tbody")[i]).data('item-class');
+					item_lines.push({
+						item_id: item_id,
+						sale_id: sale_id,
+						item_class: item_class,
+						receipt_line_sort_order: (length - i)
+					});
+				}
+
+				$('#ajax-loader').removeClass('hidden');
+				var href = '<?php echo site_url("ecommerce/manual_sync"); ?>';
+				clear_order_icon();
+
+				$.ajax({
+					type: "POST",
+					url: SITE_URL + '/sales/update_sales_item_order',
+					data: {
+						item_lines: item_lines
+					},
+					dataType: "json",
+					success: function(data) {
+						$('#ajax-loader').addClass('hidden');
+						console.log("update");
+					},
+					error: function() {
+						$('#ajax-loader').addClass('hidden');
+						console.log("update");
+					}
 				});
 			}
 
-			$('#ajax-loader').removeClass('hidden');
-			var href = '<?php echo site_url("ecommerce/manual_sync"); ?>';
-			clear_order_icon();
+			function invoice_receipt_item_sort(obj, item_type, order_type) {
+				var length = $("#receipt-draggable tbody").length;
+				var item_lines = [];
+				for (let i = 0; i < length; i++) {
+					let item_id = $($("#receipt-draggable tbody")[i]).data('item-id');
+					let sale_id = $($("#receipt-draggable tbody")[i]).data('sale-id');
+					let item_name = $($("#receipt-draggable tbody")[i]).data('item-name');
+					let item_price = $($("#receipt-draggable tbody")[i]).data('item-price');
+					let item_qty = $($("#receipt-draggable tbody")[i]).data('item-qty');
+					let item_total = $($("#receipt-draggable tbody")[i]).data('item-total');
+					let item_class = $($("#receipt-draggable tbody")[i]).data('item-class');
 
-			$.ajax({
-				type: "POST",
-				url: SITE_URL + '/sales/update_sales_item_order',
-				data: {
-					item_lines: item_lines
-				},
-				dataType: "json",
-				success: function(data) {
-					$('#ajax-loader').addClass('hidden');
-					console.log("update");
-				},
-				error: function() {
-					$('#ajax-loader').addClass('hidden');
-					console.log("update");
+					item_lines.push({
+						item_id: item_id,
+						sale_id: sale_id,
+						item_class: item_class,
+						item_name: item_name,
+						item_price: item_price,
+						item_qty: item_qty,
+						item_total: item_total,
+						line: (length - i)
+					});
+				}
+
+				if (item_type == 'price') {
+					if (order_type == 'down')
+						item_lines.sort(function(a, b) {
+							return b.item_price - a.item_price
+						});
+					else
+						item_lines.sort(function(a, b) {
+							return a.item_price - b.item_price
+						});
+				} else if (item_type == 'qty') {
+					if (order_type == 'down')
+						item_lines.sort(function(a, b) {
+							return b.item_qty - a.item_qty
+						});
+					else
+						item_lines.sort(function(a, b) {
+							return a.item_qty - b.item_qty
+						});
+				} else if (item_type == 'total') {
+					if (order_type == 'down')
+						item_lines.sort(function(a, b) {
+							return b.item_total - a.item_total
+						});
+					else
+						item_lines.sort(function(a, b) {
+							return a.item_total - b.item_total
+						});
+				} else if (item_type == 'name') {
+					if (order_type == 'down')
+						item_lines.sort(function(a, b) {
+							if (a.item_name > b.item_name) {
+								return -1;
+							}
+							if (b.item_name > a.item_name) {
+								return 1;
+							}
+							return 0;
+						});
+					else
+						item_lines.sort(function(a, b) {
+							if (b.item_name > a.item_name) {
+								return -1;
+							}
+							if (b.item_name > a.item_name) {
+								return 1;
+							}
+							return 0;
+						});
+				}
+
+				sort_items(item_lines);
+				if (order_type == 'up') {
+					$(obj).removeClass('ion-arrow-down-b');
+					$(obj).addClass('ion-arrow-up-b');
+				} else {
+					$(obj).removeClass('ion-arrow-up-b');
+					$(obj).addClass('ion-arrow-down-b');
+				}
+			}
+
+			function sort_items(item_lines) {
+				for (let i = 0; i < item_lines.length; i++) {
+					var obj_origin = $("#receipt-draggable tbody[data-item-id='" + item_lines[i]['item_id'] + "']");
+					var obj_new = obj_origin.clone();
+					$("#receipt-draggable").append(obj_new);
+					obj_origin.remove();
+				}
+				updateItemOrder();
+			}
+
+			function clear_order_icon() {
+				$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").removeClass('ion-arrow-up-b');
+				$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").removeClass('ion-arrow-down-b');
+			}
+
+			$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").on('click', function() {
+				var type = "price";
+				if ($(this).hasClass('item-name')) {
+					type = 'name';
+				} else if ($(this).hasClass('item-qty')) {
+					type = 'qty';
+				} else if ($(this).hasClass('item-total')) {
+					type = 'total';
+				} else if ($(this).hasClass('item-price')) {
+					type = 'price';
+				}
+
+				if ($(this).hasClass('ion-arrow-down-b')) {
+					invoice_receipt_item_sort(this, type, 'up');
+				} else if ($(this).hasClass('ion-arrow-up-b')) {
+					invoice_receipt_item_sort(this, type, 'down');
+				} else {
+					invoice_receipt_item_sort(this, type, 'down');
 				}
 			});
+		<?php
 		}
-
-		function invoice_receipt_item_sort(obj, item_type, order_type) {
-			var length = $("#receipt-draggable tbody").length;
-			var item_lines = [];
-			for (let i = 0; i < length; i++) {
-				let item_id = $($("#receipt-draggable tbody")[i]).data('item-id');
-				let sale_id = $($("#receipt-draggable tbody")[i]).data('sale-id');
-				let item_name = $($("#receipt-draggable tbody")[i]).data('item-name');
-				let item_price = $($("#receipt-draggable tbody")[i]).data('item-price');
-				let item_qty = $($("#receipt-draggable tbody")[i]).data('item-qty');
-				let item_total = $($("#receipt-draggable tbody")[i]).data('item-total');
-				let item_class = $($("#receipt-draggable tbody")[i]).data('item-class');
-
-				item_lines.push({
-					item_id: item_id,
-					sale_id: sale_id,
-					item_class: item_class,
-					item_name: item_name,
-					item_price: item_price,
-					item_qty: item_qty,
-					item_total: item_total,
-					line: (length - i)
-				});
-			}
-
-			if (item_type == 'price') {
-				if (order_type == 'down')
-					item_lines.sort(function(a, b) {
-						return b.item_price - a.item_price
-					});
-				else
-					item_lines.sort(function(a, b) {
-						return a.item_price - b.item_price
-					});
-			} else if (item_type == 'qty') {
-				if (order_type == 'down')
-					item_lines.sort(function(a, b) {
-						return b.item_qty - a.item_qty
-					});
-				else
-					item_lines.sort(function(a, b) {
-						return a.item_qty - b.item_qty
-					});
-			} else if (item_type == 'total') {
-				if (order_type == 'down')
-					item_lines.sort(function(a, b) {
-						return b.item_total - a.item_total
-					});
-				else
-					item_lines.sort(function(a, b) {
-						return a.item_total - b.item_total
-					});
-			} else if (item_type == 'name') {
-				if (order_type == 'down')
-					item_lines.sort(function(a, b) {
-						if (a.item_name > b.item_name) {
-							return -1;
-						}
-						if (b.item_name > a.item_name) {
-							return 1;
-						}
-						return 0;
-					});
-				else
-					item_lines.sort(function(a, b) {
-						if (b.item_name > a.item_name) {
-							return -1;
-						}
-						if (b.item_name > a.item_name) {
-							return 1;
-						}
-						return 0;
-					});
-			}
-
-			sort_items(item_lines);
-			if (order_type == 'up') {
-				$(obj).removeClass('ion-arrow-down-b');
-				$(obj).addClass('ion-arrow-up-b');
-			} else {
-				$(obj).removeClass('ion-arrow-up-b');
-				$(obj).addClass('ion-arrow-down-b');
-			}
-		}
-
-		function sort_items(item_lines) {
-			for (let i = 0; i < item_lines.length; i++) {
-				var obj_origin = $("#receipt-draggable tbody[data-item-id='" + item_lines[i]['item_id'] + "']");
-				var obj_new = obj_origin.clone();
-				$("#receipt-draggable").append(obj_new);
-				obj_origin.remove();
-			}
-			updateItemOrder();
-		}
-
-		function clear_order_icon() {
-			$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").removeClass('ion-arrow-up-b');
-			$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").removeClass('ion-arrow-down-b');
-		}
-
-		$(".invoice-head.item-name, .invoice-head.item-price, .invoice-head.item-qty, .invoice-head.item-total").on('click', function() {
-			var type = "price";
-			if ($(this).hasClass('item-name')) {
-				type = 'name';
-			} else if ($(this).hasClass('item-qty')) {
-				type = 'qty';
-			} else if ($(this).hasClass('item-total')) {
-				type = 'total';
-			} else if ($(this).hasClass('item-price')) {
-				type = 'price';
-			}
-
-			if ($(this).hasClass('ion-arrow-down-b')) {
-				invoice_receipt_item_sort(this, type, 'up');
-			} else if ($(this).hasClass('ion-arrow-up-b')) {
-				invoice_receipt_item_sort(this, type, 'down');
-			} else {
-				invoice_receipt_item_sort(this, type, 'down');
-			}
-		});
-	<?php 
-	}
-	?>
+		?>
 	});
 
 	$('#print_duplicate_receipt').click(function() {
@@ -2158,11 +2149,12 @@ if ($this->config->item('allow_reorder_sales_receipt'))
 	<?php
 	if ($this->config->item('redirect_to_sale_or_recv_screen_after_printing_receipt')) {
 	?>
-	window.onafterprint = function() {
-	  setTimeout(function() {
-	    window.location = '<?php echo site_url('sales'); ?>';
-	  }, 2000); // 2000 milliseconds (2 seconds) delay
-	};	<?php
+		window.onafterprint = function() {
+			setTimeout(function() {
+				window.location = '<?php echo site_url('sales'); ?>';
+			}, 2000); // 2000 milliseconds (2 seconds) delay
+		};
+	<?php
 	}
 	?>
 
@@ -2321,25 +2313,22 @@ if ($this->config->item('allow_reorder_sales_receipt'))
 	<?php
 	}
 	?>
-	
+
 	<?php
-	if (isset($_SESSION['do_async_inventory_updates']) && $_SESSION['do_async_inventory_updates'])
-	{
-		if (!empty($_SESSION['async_inventory_updates']))
-		{
-			?>
+	if (isset($_SESSION['do_async_inventory_updates']) && $_SESSION['do_async_inventory_updates']) {
+		if (!empty($_SESSION['async_inventory_updates'])) {
+	?>
 			$.get(<?php echo json_encode(site_url('home/async_external_inventory_updates')); ?>);
-			<?php
+	<?php
 		}
-		
+
 		unset($_SESSION['do_async_inventory_updates']);
 	}
 	?>
 	<?php
-	if (isset($prompt_for_customer_info) && $prompt_for_customer_info)
-	{
+	if (isset($prompt_for_customer_info) && $prompt_for_customer_info) {
 	?>
-		$.get(<?php echo json_encode(site_url('sales/prompt_for_customer_info/'.$sale_id_raw)); ?>);
+		$.get(<?php echo json_encode(site_url('sales/prompt_for_customer_info/' . $sale_id_raw)); ?>);
 	<?php
 	}
 	?>
@@ -2409,8 +2398,10 @@ if ($this->config->item('allow_reorder_sales_receipt'))
 	<?php if (!$this->config->item('remove_customer_contact_info_from_receipt')) { ?>
 	
 	<?php if (!empty($customer_address_1)) { ?><?php echo lang('common_address', '', array(), TRUE); ?>: <?php echo H($customer_address_1 . ' ' . $customer_address_2); ?><?php } ?>
-	<?php if (!empty($customer_city)) { echo H($customer_city . ' ' . $customer_state . ', ' . $customer_zip); ?><?php } ?>
-	<?php if (!empty($customer_country)) { echo H($customer_country); ?> <?php } ?>
+	<?php if (!empty($customer_city)) {
+			echo H($customer_city . ' ' . $customer_state . ', ' . $customer_zip); ?><?php } ?>
+	<?php if (!empty($customer_country)) {
+			echo H($customer_country); ?> <?php } ?>
 	<?php if (!empty($customer_phone)) { ?><?php echo lang('common_phone_number', '', array(), TRUE); ?> : <?php echo H(format_phone_number($customer_phone)); ?> <?php } ?>
 
 	<?php if (!empty($customer_email)) { ?><?php echo lang('common_email', '', array(), TRUE); ?> : <?php echo H($customer_email); ?><?php } ?>
@@ -2444,15 +2435,15 @@ if ($this->Location->get_info_for_key('enable_credit_card_processing', isset($ov
 <?php
 foreach (array_reverse($cart_items, true) as $line => $item) {
 
-	if($this->config->item('hide_repair_items_on_receipt')){
-		if($item->is_repair_item == 1){
+	if ($this->config->item('hide_repair_items_on_receipt')) {
+		if ($item->is_repair_item == 1) {
 			continue;
 		}
 	}
 ?>
 <?php echo character_limiter(H($item->name), 14, '...'); ?><?php echo strlen(H($item->name)) < 14 ? str_repeat(' ', 14 - strlen(H($item->name))) : ''; ?> <?php echo str_replace('<span style="white-space:nowrap;">-</span>', '-', to_currency($item->unit_price, 10)); ?> <?php echo to_quantity($item->quantity); ?><?php if ($discount_exists) {
-																																																																														echo ' ' . $item->discount;
-																																																																													} ?> <?php echo str_replace('<span style="white-space:nowrap;">-</span>', '-', to_currency($item->unit_price * $item->quantity - $item->unit_price * $item->quantity * $item->discount / 100, 10)); ?>
+																																																																															echo ' ' . $item->discount;
+																																																																														} ?> <?php echo str_replace('<span style="white-space:nowrap;">-</span>', '-', to_currency($item->unit_price * $item->quantity - $item->unit_price * $item->quantity * $item->discount / 100, 10)); ?>
 
   <?php echo clean_html($item->description); ?>  <?php echo isset($item->serialnumber) ? H($item->serialnumber) : ''; ?>
 	

@@ -441,58 +441,57 @@ class Billing extends Secure_area
             'fechafin' => $end_date
         ]);
     }
+    //FACTURAR
+ 
 
-    //ELABORAR FACTURA
-   public function elaborar_factura($sale_id)
+public function elaborar_factura($sale_id)
 {
     $this->load->model('Sale');
-    $this->load->model('Customer');
-    $this->load->model('Item');
 
-    $sale = $this->Sale->get_info($sale_id)->row_array();
-    $sale_items = $this->Sale->get_sale_items($sale_id);
+    $venta = $this->Sale->get_detalle_venta_completo($sale_id);
 
-    // Preparar productos
-    $productos = [];
-    foreach ($sale_items as $item) {
-        $item_info = $this->Item->get_info($item['item_id'])->row_array();
-
-        $productos[] = [
-            "nombre" => $item_info['name'],
-            "cantidad" => $item['quantity_purchased'],
-            "precio_unitario" => $item['item_unit_price'],
-            "subtotal" => $item['subtotal'],
-            "descuento" => $item['discount_percent']
-        ];
+    if (!$venta) {
+        show_error("Venta no encontrada", 404);
+        return;
     }
 
-    // Datos del cliente si existe
-    $cliente_info = [
-        'razon_social' => '',
-        'nit' => '',
-        'email' => ''
+    // Datos del cliente (de la primera fila)
+    $cliente = (object)[
+        'razon_social' => $venta[0]->name,
+        'nit'          => $venta[0]->cliente_nit,
+        'email'        => $venta[0]->email,
     ];
 
-    if ($sale['customer_id'] && $sale['customer_id'] != -1) {
-        $customer = $this->Customer->get_info($sale['customer_id'])->row_array();
-        $cliente_info = [
-            'razon_social' => $customer['company_name'],
-            'nit' => $customer['account_number'],
-            'email' => $customer['email']
-        ];
+    // Totales
+    $subtotal = $venta[0]->subtotal;
+    $total = $venta[0]->total;
+
+    // Armar productos
+    $facturas = [];
+    foreach ($venta as $i => $p) {
+        if (!empty($p->item_id)) {
+            $facturas[] = [
+                'codigo'         => $p->item_id,
+                'cantidad'       => $p->quantity_purchased,
+                'descripcion'    => $p->item_nombre,
+                'preciounitario' => $p->item_unit_price,
+                'descuento'      => $p->discount_percent,
+                'subtotal'       => $p->item_subtotal
+            ];
+        }
     }
 
-    $data = [
-        'productos' => $productos,
-        'subtotal' => $sale['subtotal'],
-        'total' => $sale['total'],
-        'razon_social' => $cliente_info['razon_social'],
-        'nit' => $cliente_info['nit'],
-        'email' => $cliente_info['email']
-    ];
-
-    $this->load->view('billing/elaborar_factura', $data);
+    $this->load->view('billing/facturar', [
+        'razon_social'   => $cliente->razon_social,
+        'nit'            => $cliente->nit,
+        'email'          => $cliente->email,
+        'facturas'       => $facturas,
+        'subtotal'       => $subtotal,
+        'total'          => $total
+    ]);
 }
+
+
 
 
 }
