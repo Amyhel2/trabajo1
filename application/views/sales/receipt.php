@@ -170,13 +170,11 @@ if (!(isset($standalone) && $standalone)) {
 								<?php echo anchor('sales/return_order/' . $sale_id_raw, lang('sales_return', '', array(), TRUE), array('id' => 'return_order', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
 						<?php } ?>
-
-<<<<<<< HEAD
+								<br>
 						<!--Implementacion del boton factura en la venta-->
 						<a href="<?= site_url("billing/elaborar_factura/$sale_id_raw") ?>" class="btn btn-primary">
 							<i class="fa fa-file-invoice"></i> Generar Factura
 						</a>
-
 					</ul>
 				</div>
 			</div>
@@ -343,7 +341,6 @@ if (!(isset($standalone) && $standalone)) {
 									echo ' (' . lang('sales_return') . ' ' . ($this->config->item('sale_prefix') ? $this->config->item('sale_prefix') : 'POS') . ' ' . $return_sale_id . ')';
 								}
 								?>
-
 
 								</li>
 								<?php if (isset($deleted) && $deleted) { ?>

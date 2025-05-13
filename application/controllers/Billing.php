@@ -441,57 +441,54 @@ class Billing extends Secure_area
             'fechafin' => $end_date
         ]);
     }
+
     //FACTURAR
- 
+    public function elaborar_factura($sale_id)
+    {
+        $this->load->model('Sale');
 
-public function elaborar_factura($sale_id)
-{
-    $this->load->model('Sale');
+        $venta = $this->Sale->get_detalle_venta_completo($sale_id);
 
-    $venta = $this->Sale->get_detalle_venta_completo($sale_id);
-
-    if (!$venta) {
-        show_error("Venta no encontrada", 404);
-        return;
-    }
-
-    // Datos del cliente (de la primera fila)
-    $cliente = (object)[
-        'razon_social' => $venta[0]->name,
-        'nit'          => $venta[0]->cliente_nit,
-        'email'        => $venta[0]->email,
-    ];
-
-    // Totales
-    $subtotal = $venta[0]->subtotal;
-    $total = $venta[0]->total;
-
-    // Armar productos
-    $facturas = [];
-    foreach ($venta as $i => $p) {
-        if (!empty($p->item_id)) {
-            $facturas[] = [
-                'codigo'         => $p->item_id,
-                'cantidad'       => $p->quantity_purchased,
-                'descripcion'    => $p->item_nombre,
-                'preciounitario' => $p->item_unit_price,
-                'descuento'      => $p->discount_percent,
-                'subtotal'       => $p->item_subtotal
-            ];
+        if (!$venta) {
+            show_error("Venta no encontrada", 404);
+            return;
         }
+
+        // Datos del cliente (de la primera fila)
+        $cliente = (object)[
+            'razon_social' => $venta[0]->name,
+            'nit'          => $venta[0]->cliente_nit,
+            'email'        => $venta[0]->email,
+        ];
+
+        // Totales
+        $subtotal = $venta[0]->subtotal;
+        $total = $venta[0]->total;
+
+        // Armar productos
+        $facturas = [];
+        foreach ($venta as $i => $p) {
+            if (!empty($p->item_id)) {
+                $facturas[] = [
+                    'codigo'         => $p->item_id,
+                    'cantidad'       => $p->quantity_purchased,
+                    'descripcion'    => $p->item_nombre,
+                    'preciounitario' => $p->item_unit_price,
+                    'descuento'      => $p->discount_percent,
+                    'subtotal'       => $p->item_subtotal
+                ];
+            }
+        }
+
+        $this->load->view('billing/facturar', [
+            'razon_social'   => $cliente->razon_social,
+            'nit'            => $cliente->nit,
+            'email'          => $cliente->email,
+            'facturas'       => $facturas,
+            'subtotal'       => $subtotal,
+            'total'          => $total
+
+        ]);
     }
-
-    $this->load->view('billing/facturar', [
-        'razon_social'   => $cliente->razon_social,
-        'nit'            => $cliente->nit,
-        'email'          => $cliente->email,
-        'facturas'       => $facturas,
-        'subtotal'       => $subtotal,
-        'total'          => $total
-    ]);
-}
-
-
-
 
 }

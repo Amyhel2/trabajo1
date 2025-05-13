@@ -92,13 +92,14 @@ $this->load->view("partial/header_facturacion");
                 </tr>
               </thead>
               <tbody>
+                
                 <?php if (!empty($facturas)) : ?>
                   <?php $i = 1;
                   foreach ($facturas as $factura) : ?>
                     <tr>
                       <td><?= $i++ ?></td>
                       <td><?= htmlspecialchars($factura['codigo']) ?></td>
-                      <td><?= $factura['cantidad'] ?></td>
+                      <td> <?= $factura['cantidad'] ?></td>
                       <td><?= htmlspecialchars($factura['descripcion']) ?></td>
                       <td><?= number_format($factura['preciounitario'], 2) ?></td>
                       <td><?= number_format($factura['descuento'], 2) ?></td>
@@ -135,7 +136,7 @@ $this->load->view("partial/header_facturacion");
           </div>
           <div class="form-group">
             <label>Descuento (Bs):</label>
-            <input type="text" id="descuento_total" class="form-control" value="0">
+            <input type="text" id="descuento_total" value="<?= number_format($descuento, 2) ?>"class="form-control" readonly>
           </div>
           <div class="form-group">
             <label>Total (Bs):</label>

@@ -4975,7 +4975,6 @@ class Sale extends MY_Model
 
 		if ($sale_item) {
 
-
 			$cost_price 	= $sale_item->item_kit_cost_price;
 			$unit_price 	= $sale_item->item_kit_unit_price;
 			$subtotal 		= $quantity * $unit_price;
@@ -5237,7 +5236,8 @@ class Sale extends MY_Model
 
         customers.account_number AS cliente_nit,
         customers.company_name AS cliente_razon_social,
-people.first_name AS name,
+
+        people.first_name AS name, 
         
         people.last_name,
         people.email,
