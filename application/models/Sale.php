@@ -5266,4 +5266,19 @@ class Sale extends MY_Model
 
 		return $query->result(); // devolverá array de objetos (uno por ítem vendido)
 	}
+
+	public function get_descuento_total($sale_id)
+	{
+		$this->db->select("
+        SUM(sales_items.quantity_purchased * sales_items.item_unit_price * (sales_items.discount_percent / 100)) AS total_descuento
+    ");
+		$this->db->from('sales_items');
+		$this->db->where('sale_id', $sale_id);
+
+		$query = $this->db->get();
+		if ($query->num_rows() > 0) {
+			return $query->row()->total_descuento;
+		}
+		return 0;
+	}
 }

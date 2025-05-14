@@ -1,5 +1,7 @@
 <?php
 
+use oasis\names\specification\ubl\schema\xsd\CommonAggregateComponents_2\Contact;
+
 require_once("Secure_area.php");
 require_once(APPPATH . "models/cart/PHPPOSCartSale.php");
 require_once(APPPATH . "traits/taxOverrideTrait.php");
@@ -444,51 +446,75 @@ class Billing extends Secure_area
 
     //FACTURAR
     public function elaborar_factura($sale_id)
-    {
-        $this->load->model('Sale');
+{
+    $this->load->model('Sale');
+    $venta = $this->Sale->get_detalle_venta_completo($sale_id);
 
-        $venta = $this->Sale->get_detalle_venta_completo($sale_id);
-
-        if (!$venta) {
-            show_error("Venta no encontrada", 404);
-            return;
-        }
-
-        // Datos del cliente (de la primera fila)
-        $cliente = (object)[
-            'razon_social' => $venta[0]->name,
-            'nit'          => $venta[0]->cliente_nit,
-            'email'        => $venta[0]->email,
-        ];
-
-        // Totales
-        $subtotal = $venta[0]->subtotal;
-        $total = $venta[0]->total;
-
-        // Armar productos
-        $facturas = [];
-        foreach ($venta as $i => $p) {
-            if (!empty($p->item_id)) {
-                $facturas[] = [
-                    'codigo'         => $p->item_id,
-                    'cantidad'       => $p->quantity_purchased,
-                    'descripcion'    => $p->item_nombre,
-                    'preciounitario' => $p->item_unit_price,
-                    'descuento'      => $p->discount_percent,
-                    'subtotal'       => $p->item_subtotal
-                ];
-            }
-        }
-
-        $this->load->view('billing/facturar', [
-            'razon_social'   => $cliente->razon_social,
-            'nit'            => $cliente->nit,
-            'email'          => $cliente->email,
-            'facturas'       => $facturas,
-            'subtotal'       => $subtotal,
-            'total'          => $total
-
-        ]);
+    if (!$venta) {
+        show_error("Venta no encontrada", 404);
+        return;
     }
 
+    // Razón social: company_name o nombre + apellido
+    $row0 = $venta[0];
+    $nombrePersona = trim($row0->name . ' ' . $row0->last_name);
+    $razon_social  = !empty($row0->cliente_razon_social)
+                     ? $row0->cliente_razon_social
+                     : $nombrePersona;
+
+    // Cliente
+    $cliente = (object)[
+        'razon_social' => $razon_social,
+        'nit'          => $row0->cliente_nit,
+        'email'        => $row0->email,
+    ];
+
+    // Totales brutos
+    $subtotal = $row0->subtotal;
+    $total    = $row0->total;
+
+    // Armar detalle y calcular descuento_total
+    $facturas        = [];
+    $descuento_total = 0.00;
+
+    foreach ($venta as $p) {
+        if (empty($p->item_id)) continue;
+
+        // 1) Descuento por %:
+        $monto_desc = $p->item_unit_price
+                     * $p->quantity_purchased
+                     * ($p->discount_percent / 100);
+        $descuento_total += $monto_desc;
+
+        // 2) Líneas tipo "Discount" o subtotales negativos:
+        if ($p->item_subtotal < 0) {
+            // Sumamos el valor absoluto de ese subtotal negativo
+            $descuento_total += abs($p->item_subtotal);
+        }
+         
+        $facturas[] = [
+            'codigo'         => $p->item_id,
+            'cantidad'       => $p->quantity_purchased,
+            'descripcion'    => $p->item_nombre,
+            'preciounitario' => $p->item_unit_price,
+            'descuento'      => $p->discount_percent,
+            'subtotal'       => $p->item_subtotal
+        ];
+    }
+
+    // Pasar a la vista
+    $data = [
+        'razon_social' => $cliente->razon_social,
+        'nit'          => $cliente->nit,
+        'email'        => $cliente->email,
+        'facturas'     => $facturas,
+        'subtotal'     => $subtotal,
+        'descuento'    => $descuento_total,  // incluirá ahora también los Bs negativos
+        'total'        => $total
+    ];
+
+    $this->load->view('billing/facturar', $data);
+}
+
+ 
 }
