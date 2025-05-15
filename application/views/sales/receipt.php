@@ -172,7 +172,7 @@ if (!(isset($standalone) && $standalone)) {
 						<?php } ?>
 								<br>
 						<!--Implementacion del boton factura en la venta-->
-						<a href="<?= site_url("billing/elaborar_factura/$sale_id_raw") ?>" class="btn btn-primary">
+						<a href="<?= site_url("billing/facturar/$sale_id_raw") ?>" class="btn btn-primary">
 							<i class="fa fa-file-invoice"></i> Generar Factura
 						</a>
 					</ul>

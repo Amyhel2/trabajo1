@@ -2,519 +2,358 @@
 
 use oasis\names\specification\ubl\schema\xsd\CommonAggregateComponents_2\Contact;
 
-require_once("Secure_area.php");
-require_once(APPPATH . "models/cart/PHPPOSCartSale.php");
-require_once(APPPATH . "traits/taxOverrideTrait.php");
-require_once(APPPATH . "traits/creditcardProcessingTrait.php");
-require_once(APPPATH . "traits/emailSalesReceiptTrait.php");
-require_once(APPPATH . "libraries/Fatoora.php");
+require_once "Secure_area.php";
+require_once APPPATH . "models/cart/PHPPOSCartSale.php";
+require_once APPPATH . "traits/taxOverrideTrait.php";
+require_once APPPATH . "traits/creditcardProcessingTrait.php";
+require_once APPPATH . "traits/emailSalesReceiptTrait.php";
+require_once APPPATH . "libraries/Fatoora.php";
 
 class Billing extends Secure_area
 {
-    use taxOverrideTrait;
-    use creditcardProcessingTrait;
-    use emailSalesReceiptTrait;
+    use taxOverrideTrait,
+        creditcardProcessingTrait,
+        emailSalesReceiptTrait;
 
-    public $cart;
-    public $view_data = array();
     private $api_url;
 
     public function __construct()
     {
         parent::__construct();
-        $this->load->helper('form');
-        $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
-        $this->load->helper('url');
+        $this->load->helper(['form', 'url']);
         $this->load->library('session');
+        $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-    //LISTAR FACTURAS
-    public function index()
-    {
-        $fechainicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
-        $fechafin = $this->input->post('fecha_fin') ?? date('Y-m-d');
 
-        $request = [
-            "funcion" => "listarFacturas",
-            "ids" => "1",
-            "fechainicio" => $fechainicio,
-            "fechafin" => $fechafin
-        ];
 
-        $ch = curl_init('http://localhost:8080/facturacion/api/factura/funcionesFactura.php');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request));
-        $response = curl_exec($ch);
-        curl_close($ch);
 
-        $data = json_decode($response, true);
+    // Pestaña 1: Listado de Facturas
+    public function index() {
+        $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
+        $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
+
+        // Validación de fechas
+        if ($inicio > $fin) {
+            $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
+            redirect('billing/index');
+        }
+
+        try {
+            $resp = $this->call_api([
+                'funcion'     => 'listarFacturas',
+                'ids'         => '1', // Ajustar según configuración SIAT
+                'fechainicio' => $inicio,
+                'fechafin'    => $fin
+            ]);
+            
+            $facturas = $resp['facturas'] ?? [];
+        } catch (Exception $e) {
+            log_message('error', 'Error API: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'Error al conectar con el servicio de facturación');
+            $facturas = [];
+        }
 
         $this->load->view('billing/index', [
-            'facturas'     => $data['facturas'] ?? [],
-            'fechainicio'  => $fechainicio,
-            'fechafin'     => $fechafin
+            'facturas'    => $facturas,
+            'fechainicio' => $inicio,
+            'fechafin'    => $fin
         ]);
     }
 
-    public function ver_pdf($idfac)
-    {
-        $payload = [
-            'funcion' => 'generarFacturaPdf',
-            'idfac'   => $idfac
-        ];
-        $ch = curl_init($this->api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        $pdf = curl_exec($ch);
-        header('Content-Type: application/pdf');
-        echo $pdf;
+    // Generar y mostrar PDF
+    public function ver_pdf($idfac = null) {
+        $idfac = $idfac ?: $this->session->userdata('idfac');
+        if (!$idfac) {
+            $this->session->set_flashdata('error', 'Factura no identificada');
+            redirect('billing/index');
+        }
+
+        try {
+            // Paso 1: Generar PDF
+            $this->call_api(['funcion' => 'generarFacturaPdf', 'idfac' => $idfac]);
+            
+            // Paso 2: Obtener CUF
+            $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? [];
+            if (empty($factura['cuf'])) {
+                throw new Exception("Código CUF no disponible");
+            }
+
+            $pdf_path = FCPATH . "Siat/temp/factura-{$factura['cuf']}.pdf";
+            if (!file_exists($pdf_path)) {
+                throw new Exception("Archivo PDF no generado");
+            }
+
+            header('Content-Type: application/pdf');
+            readfile($pdf_path);
+            exit;
+        } catch (Exception $e) {
+            log_message('error', 'Error PDF: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'No se pudo generar el PDF: ' . $e->getMessage());
+            redirect('billing/index');
+        }
     }
 
+    // Enviar por Email
+    public function enviar_email($idfac) {
+        try {
+            $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? null;
+            if (!$factura) {
+                throw new Exception("Factura no encontrada");
+            }
 
-    public function imprimir_rollo($idfac)
-    {
+            $resp = $this->call_api([
+                'funcion' => 'enviarMailFactura',
+                'mail'    => $factura['email'],
+                'rzs'     => $factura['nombreRazonSocial'],
+                'nit'     => $factura['numeroDocumento'],
+                'cuf'     => $factura['cuf']
+            ]);
 
-        $this->ver_pdf($idfac);
-    }
+            if (isset($resp['error'])) {
+                throw new Exception($resp['error']);
+            }
 
-
-    public function imprimir_media($idfac)
-    {
-        $this->ver_pdf($idfac);
-    }
-
-    public function ver_xml($idfac)
-    {
-        $payload = [
-            'funcion' => 'generarFacturaXml',
-            'idfac'   => $idfac
-        ];
-        $ch = curl_init($this->api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        $xml = curl_exec($ch);
-        header('Content-Type: application/xml');
-        echo $xml;
-    }
-
-    public function enviar_email($idfac)
-    {
-
-        $factura = $this->call_api([
-            'funcion' => 'listarFacturas',
-            'ids'     => $idfac
-        ])['facturas'][0] ?? null;
-
-        if (!$factura) show_error('Factura no encontrada', 404);
-
-        $payload = [
-            'funcion' => 'enviarMailFactura',
-            'mail'    => $factura['email'] ?? '',
-            'rzs'     => $factura['nombreRazonSocial'],
-            'nit'     => $factura['numeroDocumento'],
-            'cuf'     => $factura['cuf']
-        ];
-
-        $resp = $this->call_api($payload);
-        if (!empty($resp['encontrado'])) {
-            $this->session->set_flashdata('success', 'Email enviado correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error enviando email.');
+            $this->session->set_flashdata('success', 'Email enviado correctamente');
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Error: ' . $e->getMessage());
         }
         redirect('billing/index');
     }
 
-    public function anular_factura($idfac)
-    {
-        $payload = [
-            'funcion' => 'anularFactura',
-            'ids'     => '1',
-            'idf'     => $idfac,
-            'motivo'  => '1'
-        ];
+    // Anular Factura
+    public function anular_factura($idfac) {
+        try {
+            $resp = $this->call_api([
+                'funcion' => 'anularFactura',
+                'ids'     => '1', 
+                'idf'     => $idfac,
+                'motivo'  => '1' // Ajustar según catálogo SIAT
+            ]);
 
-        $resp = $this->call_api($payload);
-        if (!empty($resp) && $resp === true) {
-            $this->session->set_flashdata('success', 'Factura anulada correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al anular la factura.');
+            if (empty($resp['res'])) {
+                throw new Exception("Respuesta inválida del servidor");
+            }
+
+            $this->session->set_flashdata('success', 'Factura anulada correctamente');
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Error al anular: ' . $e->getMessage());
         }
         redirect('billing/index');
     }
-    //
 
-    public function facturar()
+    // Método para llamadas API genéricas
+   
+
+
+
+    
+    
+
+    // Vista facturar
+    public function facturar($sale_id = null)
     {
-        $this->load->view('billing/facturar');
+        // Modelo de productos para poblar el select
+        $this->load->model('Item');
+
+        // Si no se proporciona sale_id, muestra formulario en blanco
+        if (!$sale_id) {
+            return $this->load->view('billing/facturar', [
+                'razon_social' => '',
+                'nit'          => '',
+                'email'        => '',
+                'facturas'     => [],
+                'subtotal'     => 0.00,
+                'descuento'    => 0.00,
+                'total'        => 0.00,
+                'productos'    => $this->Item->get_all()
+            ]);
+        }
+
+        // Con sale_id, procesa venta existente
+        $this->load->model('Sale');
+        $venta = $this->Sale->get_detalle_venta_completo($sale_id);
+        if (empty($venta)) {
+            show_error('Venta no encontrada', 404);
+        }
+
+        $row    = $venta[0];
+        $nombre = trim("{$row->name} {$row->last_name}");
+        $razon  = $row->cliente_razon_social ?: $nombre;
+
+        $detalle         = [];
+        $descuento_total = 0.00;
+        foreach ($venta as $p) {
+            if (!$p->item_id) continue;
+
+            // Calcula descuento de línea y subtotales negativos
+            $m_desc           = $p->item_unit_price * $p->quantity_purchased * ($p->discount_percent / 100);
+            $neg_subt         = $p->item_subtotal < 0 ? abs($p->item_subtotal) : 0;
+            $descuento_total += $m_desc + $neg_subt;
+
+            $detalle[] = [
+                'codigo'         => $p->item_id,
+                'cantidad'       => $p->quantity_purchased,
+                'descripcion'    => $p->item_nombre,
+                'preciounitario' => $p->item_unit_price,
+                'descuento'      => $p->discount_percent,
+                'subtotal'       => $p->item_subtotal
+            ];
+        }
+
+        // Carga la vista con datos de la venta
+        $this->load->view('billing/facturar', [
+            'razon_social' => $razon,
+            'nit'          => $row->cliente_nit,
+            'email'        => $row->email,
+            'facturas'     => $detalle,
+            'subtotal'     => $row->subtotal,
+            'descuento'    => $descuento_total,
+            'total'        => $row->total,
+            'productos'    => $this->Item->get_all()
+        ]);
     }
 
-    //CODIGOS
+    // Procesar factura via AJAX
+    public function submit_factura()
+    {
+        $m = json_decode($this->input->post('maestro'));
+        $d = json_decode($this->input->post('detalle'));
+        $resp = $this->call_api(['funcion' => 'procesarFactura', 'maestro' => $m, 'detalle' => $d, 'idven' => $m->idven ?? '0']);
+
+        if (!empty($resp['idfac'])) {
+            $this->session->set_userdata(['idfac' => $resp['idfac'], 'cuf' => $resp['cuf']]);
+            $out = ['success' => true, 'idfac' => $resp['idfac']];
+        } else {
+            $out = ['success' => false, 'error' => $resp['error'] ?? $resp];
+        }
+        return $this->output->set_content_type('application/json')->set_output(json_encode($out));
+    }
+
+    
+    // Códigos
     public function codigos()
     {
-        $payload = ['funcion' => 'listarCodigos', 'ids' => '1'];
-        $response = $this->call_api_one($payload);
-
-        $data['cufds'] = isset($response['cufds']['data']) ? $response['cufds']['data'] : [];
-        $data['cuis'] = isset($response['cuiss']['data']) ? $response['cuiss']['data'] : [];
-
-        $this->load->view('billing/codigos', $data);
+        $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+        $this->load->view('billing/codigos', [
+            'cufds' => $resp['cufds']['data'] ?? [],
+            'cuis' => $resp['cuiss']['data'] ?? []
+        ]);
     }
-
     public function sincronizar_cufd()
     {
-        $payload = ['funcion' => 'sincronizarCufd', 'ids' => '1'];
-        $this->call_api_one($payload);
+        $this->call_api(['funcion' => 'sincronizarCufd', 'ids' => '1']);
         redirect('billing/codigos');
     }
-
     public function sincronizar_cuis()
     {
-        $payload = ['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1'];
-        $this->call_api($payload);
+        $this->call_api(['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1']);
         redirect('billing/codigos');
     }
 
-    private function call_api_one($payload)
-    {
-        $ch = curl_init($this->api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        $result = curl_exec($ch);
-        curl_close($ch);
-        $decoded = json_decode($result, true);
-        return is_array($decoded) ? $decoded : [];
-    }
-    //
-
-    //CONFIGURACION
+    // Configuración
     public function configuracion()
     {
         $this->load->view('billing/configuracion');
     }
-
     public function editarConfiguracion()
     {
         $this->load->view('billing/editarConfiguracion');
     }
-
     public function guardarConfiguracion()
-    {
-        $this->load->view('billing/configuracion');
+    { /* validar y guardar */
+        redirect('billing/configuracion');
     }
-    //
 
-    //SUCURSALES
+    // Sucursales
     public function sucursales()
     {
-        $suc = $this->call_api([
-            'funcion' => 'listarSucursales'
-        ]);
-        $data['sucursales'] = $suc['sucursales']['data'] ?? [];
-        $this->load->view('billing/sucursales', $data);
+        $resp = $this->call_api(['funcion' => 'listarSucursales']);
+        $this->load->view('billing/sucursales', ['sucursales' => $resp['sucursales']['data'] ?? []]);
     }
-
     public function sincronizar_sucursales()
     {
-        $this->call_api([
-            'funcion' => 'listarSucursales'
-        ]);
+        $this->call_api(['funcion' => 'listarSucursales']);
         redirect('billing/sucursales');
     }
-
     public function sincronizar_puntos()
     {
-        $this->call_api([
-            'funcion'       => 'sincronizarPos',
-            'nroSucursal'   => 0
-        ]);
-
+        $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
         redirect('billing/sucursales');
     }
-
-    private function call_api(array $payload)
-    {
-        $ch = curl_init($this->api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        $result = curl_exec($ch);
-        curl_close($ch);
-        return json_decode($result, true) ?: [];
-    }
-
     public function nuevaSucursal()
     {
         $this->load->view('billing/crearSucursal');
     }
-
     public function crearSucursal()
     {
-
-        $payload = [
-            'funcion'       => 'newSucursal',
-            'sucursal'      => $this->input->post('sucursal'),
-            'direccion'     => $this->input->post('direccion'),
-            'responsable'   => $this->input->post('responsable'),
-            'telefono'      => $this->input->post('telefono'),
-            'celular'       => $this->input->post('celular'),
-            'idsucursal'    => ''
-        ];
-
-        if ($this->input->post('nroSucursal')) {
-            $payload['nroSucursal']   = $this->input->post('nroSucursal');
-        }
-        if ($this->input->post('codigoSucursal')) {
-            $payload['codigoSucursal'] = $this->input->post('codigoSucursal');
-        }
-
-        $response = $this->call_api($payload);
-
-        if (isset($response['ok']) && $response['ok']) {
-            $this->session->set_flashdata('success', 'Sucursal creada correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al crear sucursal.');
-        }
-
-        redirect(site_url('billing/sucursales') . '#sucursales');
+        $pl = ['funcion' => 'newSucursal', 'sucursal' => $this->input->post('sucursal'), 'direccion' => $this->input->post('direccion'), 'responsable' => $this->input->post('responsable'), 'telefono' => $this->input->post('telefono'), 'celular' => $this->input->post('celular')];
+        if ($n = $this->input->post('nroSucursal')) $pl['nroSucursal'] = $n;
+        if ($c = $this->input->post('codigoSucursal')) $pl['codigoSucursal'] = $c;
+        $resp = $this->call_api($pl);
+        $ok = !empty($resp['ok']);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Sucursal creada' : 'Error creando sucursal');
+        redirect('billing/sucursales#sucursales');
     }
-
-
     public function editarSucursal()
     {
         $this->load->view('billing/editarSucursal');
     }
-
     public function crearPuntoVenta()
     {
         $this->load->view('billing/crearPuntoVenta');
     }
-    //
 
-    //SINCRONIZACION
+    // Sincronización general
     public function sincronizacion()
     {
         $this->load->view('billing/sincronizacion');
     }
-
     public function sincronizar()
     {
-        $data = array(
-            'funcion' => 'sincronizarActividades',
-            'codigo' => '123456',
-        );
-
-        $api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
-
-        $ch = curl_init($api_url);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-
-        // Ejecuta la petición
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if (curl_errno($ch)) {
-            $error_msg = curl_error($ch);
-            log_message('error', 'Error al sincronizar con la API: ' . $error_msg);
-            $this->session->set_flashdata('error', 'Error al comunicarse con la API.');
-        } elseif ($httpcode != 200) {
-            log_message('error', 'La API devolvió HTTP ' . $httpcode);
-            $this->session->set_flashdata('error', 'Error al sincronizar: Código ' . $httpcode);
-        } else {
-            $result = json_decode($response, true);
-            if ($result && isset($result['estado']) && $result['estado'] === true) {
-                $this->session->set_flashdata('success', 'Sincronización exitosa.');
-            } else {
-                $this->session->set_flashdata('error', 'Sincronización fallida: ' . print_r($result, true));
-            }
-        }
-
-        curl_close($ch);
-
-        redirect('billing');
+        $resp = $this->call_api(['funcion' => 'sincronizarActividades', 'codigo' => '123456']);
+        $ok = !empty($resp['estado']);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Sincronización exitosa' : 'Error sincronizando');
+        redirect('billing/index');
     }
-    //
 
-    //EVENTOS 
+    // Eventos
     public function eventos()
     {
-        $request = [
-            'funcion' => 'listarEventos',
-            'ids'     => '1'
-        ];
-
-        $ch = curl_init('http://localhost:8080/facturacion/api/factura/funcionesFactura.php');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request));
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $decoded = json_decode($response, true);
-        $eventos = $decoded['eventos']['data'] ?? [];
-
-        $this->load->view('billing/eventos', [
-            'eventos' => $eventos,
-
-        ]);
+        $resp = $this->call_api(['funcion' => 'listarEventos', 'ids' => '1']);
+        $this->load->view('billing/eventos', ['eventos' => $resp['eventos']['data'] ?? []]);
     }
-
     public function nuevoEvento()
     {
-        $requestPos = ['funcion' => 'listarPos'];
-        $ch = curl_init('http://localhost:8080/facturacion/api/factura/funcionesFactura.php');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestPos));
-        $responsePos = curl_exec($ch);
-        curl_close($ch);
-
-        $decodedPos = json_decode($responsePos, true);
-
-        $pos = $decodedPos['pos']['data'] ?? [];
-
-        $this->load->view('billing/crearEvento', ['pos' => $pos]);
+        $resp = $this->call_api(['funcion' => 'listarPos']);
+        $this->load->view('billing/crearEvento', ['pos' => $resp['pos']['data'] ?? []]);
     }
-
     public function crearEvento()
     {
-        $nroPuntoVenta = $this->input->post('punto_de_venta');
-        $tipoEvento     = $this->input->post('tipo_evento');
-
-        $request = [
-            'funcion'        => 'newEventoSignificativo',
-            'ids'            => '1',
-            'nroPuntoVenta'  => $nroPuntoVenta,
-            'tipoEvento'     => $tipoEvento
-        ];
-
-        $ch = curl_init('http://localhost:8080/facturacion/api/factura/funcionesFactura.php');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request));
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $result = json_decode($response, true);
-
-        if (!empty($result['transaccion']) && $result['transaccion'] === true) {
-            $this->session->set_flashdata('success', 'Evento creado correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al crear el evento.');
-        }
-
+        $pl = ['funcion' => 'newEventoSignificativo', 'ids' => '1', 'nroPuntoVenta' => $this->input->post('punto_de_venta'), 'tipoEvento' => $this->input->post('tipo_evento')];
+        $resp = $this->call_api($pl);
+        $ok = !empty($resp['transaccion']);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Evento creado' : 'Error creando evento');
         redirect('billing/eventos');
     }
-    //
 
-    public function list_invoices()
+    // Helper único
+    private function call_api(array $p)
     {
-
-        $this->load->helper('form');
-        $start_date = $this->input->post('fechainicio') ?? date('Y-m-01');
-        $end_date = $this->input->post('fechafin') ?? date('Y-m-d');
-
-        $request_data = [
-            'funcion' => 'listarFacturas',
-            'ids' => '1',
-            'fechainicio' => $start_date,
-            'fechafin' => $end_date
-        ];
-
-        $ch = curl_init('http://localhost:8080/facturacion/api/factura/funcionesFactura.php');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_data));
-        $response = curl_exec($ch);
+        $ch = curl_init($this->api_url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($p)]);
+        $raw = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
         curl_close($ch);
-
-        $facturas = json_decode($response, true)['facturas'] ?? [];
-
-        $this->load->view('billing/list_invoices', [
-            'facturas' => $facturas,
-            'fechainicio' => $start_date,
-            'fechafin' => $end_date
-        ]);
-    }
-
-    //FACTURAR
-    public function elaborar_factura($sale_id)
-{
-    $this->load->model('Sale');
-    $venta = $this->Sale->get_detalle_venta_completo($sale_id);
-
-    if (!$venta) {
-        show_error("Venta no encontrada", 404);
-        return;
-    }
-
-    // Razón social: company_name o nombre + apellido
-    $row0 = $venta[0];
-    $nombrePersona = trim($row0->name . ' ' . $row0->last_name);
-    $razon_social  = !empty($row0->cliente_razon_social)
-                     ? $row0->cliente_razon_social
-                     : $nombrePersona;
-
-    // Cliente
-    $cliente = (object)[
-        'razon_social' => $razon_social,
-        'nit'          => $row0->cliente_nit,
-        'email'        => $row0->email,
-    ];
-
-    // Totales brutos
-    $subtotal = $row0->subtotal;
-    $total    = $row0->total;
-
-    // Armar detalle y calcular descuento_total
-    $facturas        = [];
-    $descuento_total = 0.00;
-
-    foreach ($venta as $p) {
-        if (empty($p->item_id)) continue;
-
-        // 1) Descuento por %:
-        $monto_desc = $p->item_unit_price
-                     * $p->quantity_purchased
-                     * ($p->discount_percent / 100);
-        $descuento_total += $monto_desc;
-
-        // 2) Líneas tipo "Discount" o subtotales negativos:
-        if ($p->item_subtotal < 0) {
-            // Sumamos el valor absoluto de ese subtotal negativo
-            $descuento_total += abs($p->item_subtotal);
+        if ($err) {
+            log_message('error', 'API-CURL: ' . $err);
+            return ['error' => 'Comunicación fallida'];
         }
-         
-        $facturas[] = [
-            'codigo'         => $p->item_id,
-            'cantidad'       => $p->quantity_purchased,
-            'descripcion'    => $p->item_nombre,
-            'preciounitario' => $p->item_unit_price,
-            'descuento'      => $p->discount_percent,
-            'subtotal'       => $p->item_subtotal
-        ];
+        if ($code !== 200) {
+            log_message('error', 'API-HTTP ' . $code . ': ' . $raw);
+            return ['error' => 'HTTP ' . $code];
+        }
+        return json_decode($raw, true) ?: ['error' => 'JSON inválido'];
     }
-
-    // Pasar a la vista
-    $data = [
-        'razon_social' => $cliente->razon_social,
-        'nit'          => $cliente->nit,
-        'email'        => $cliente->email,
-        'facturas'     => $facturas,
-        'subtotal'     => $subtotal,
-        'descuento'    => $descuento_total,  // incluirá ahora también los Bs negativos
-        'total'        => $total
-    ];
-
-    $this->load->view('billing/facturar', $data);
-}
-
- 
 }

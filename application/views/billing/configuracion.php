@@ -1,3 +1,4 @@
+
 <?php
 $this->load->view("partial/header");
 $this->load->view("partial/header_facturacion");
@@ -159,13 +160,7 @@ $this->load->view("partial/header_facturacion");
               <li>
                 <button type="submit" class="btn btn cobn btn-primary btn-lg"><span class="ion-ios-search-strong"></span><span class="hidden-xs hidden-sm"></span></button>
               </li>
-              <li>
-                <div class="clear-block hidden">
-                  <a class="clear" href="http://localhost/pos/index.php/suppliers/clear_state">
-                    <i class="ion ion-close-circled"></i>
-                  </a>
-                </div>
-              </li>
+              
             </ul>
           </div>
 
@@ -179,13 +174,6 @@ $this->load->view("partial/header_facturacion");
 
               <li>
                 <button type="submit" class="btn btn-primary btn-lg"><span class="ion-ios-search-strong"></span><span class="hidden-xs hidden-sm"></span></button>
-              </li>
-              <li>
-                <div class="clear-block hidden">
-                  <a class="clear" href="http://localhost/pos/index.php/suppliers/clear_state">
-                    <i class="ion ion-close-circled"></i>
-                  </a>
-                </div>
               </li>
             </ul>
           </div>
