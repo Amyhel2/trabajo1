@@ -532,4 +532,22 @@ $lang['reports_enhanced_summary_reports'] = 'Informes de resumen mejorados';
 $lang['reports_can_change_report_date'] = 'Puede cambiar la fecha del informe';
 $lang['reports_suspended_sale_type'] = 'Tipo de venta suspendida';
 $lang['reports_exclude_ecommerce'] = 'Excluir comercio electrónico';
+
+//Facturacion
+$lang['reports_invoices'] = 'Facturacion';
+
+$lang['facturacion_actividades_documento_sector'] = 'Actividades Documento Sector';
+$lang['facturacion_leyendas_factura'] = 'Leyendas Factura';
+$lang['facturacion_productos_servicios'] = 'Productos y Servicios';
+$lang['facturacion_eventos_significativos'] = 'Eventos Significativos';
+$lang['facturacion_motivos_anulacion'] = 'Motivos anulacion';
+$lang['facturacion_tipos_documento_identidad'] = 'Tipos Documento de Identidad';
+$lang['facturacion_tipos_documento_sector'] = 'Tipos Documento Sector';
+$lang['facturacion_tipos_emision'] = 'Tipos Emision';
+$lang['facturacion_tipos_metodo_pago'] = 'Tipos Metodos de Pago';
+$lang['facturacion_tipos_moneda'] = 'Tipos Moneda';
+$lang['facturacion_tipos_punto_venta'] = 'Tipos Punto Venta';
+$lang['facturacion_tipos_factura'] = 'Tipos Factura';
+$lang['facturacion_unidades_de_medida'] = 'Unidades de Medida';
 ?>
+

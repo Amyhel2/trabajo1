@@ -26,7 +26,7 @@
       </form>
     </div>
   </div>
-
+  <br>
   <!-- Tabla de Resultados -->
   <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">

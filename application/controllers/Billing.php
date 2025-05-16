@@ -25,10 +25,7 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-
-
-
-    // Pestaña 1: Listado de Facturas
+    // LISTADO DE FACTURAS
     public function index() {
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
@@ -42,7 +39,7 @@ class Billing extends Secure_area
         try {
             $resp = $this->call_api([
                 'funcion'     => 'listarFacturas',
-                'ids'         => '1', // Ajustar según configuración SIAT
+                'ids'         => '1',
                 'fechainicio' => $inicio,
                 'fechafin'    => $fin
             ]);
@@ -78,7 +75,6 @@ class Billing extends Secure_area
             if (empty($factura['cuf'])) {
                 throw new Exception("Código CUF no disponible");
             }
-
             $pdf_path = FCPATH . "Siat/temp/factura-{$factura['cuf']}.pdf";
             if (!file_exists($pdf_path)) {
                 throw new Exception("Archivo PDF no generado");
@@ -109,6 +105,7 @@ class Billing extends Secure_area
                 'nit'     => $factura['numeroDocumento'],
                 'cuf'     => $factura['cuf']
             ]);
+            
 
             if (isset($resp['error'])) {
                 throw new Exception($resp['error']);
@@ -141,97 +138,73 @@ class Billing extends Secure_area
         }
         redirect('billing/index');
     }
+    ////
 
-    // Método para llamadas API genéricas
-   
-
-
-
-    
-    
-
-    // Vista facturar
+    // FACTURAR
     public function facturar($sale_id = null)
-    {
-        // Modelo de productos para poblar el select
-        $this->load->model('Item');
+{
+    $this->load->model(['Item', 'Sale']);
 
-        // Si no se proporciona sale_id, muestra formulario en blanco
-        if (!$sale_id) {
-            return $this->load->view('billing/facturar', [
-                'razon_social' => '',
-                'nit'          => '',
-                'email'        => '',
-                'facturas'     => [],
-                'subtotal'     => 0.00,
-                'descuento'    => 0.00,
-                'total'        => 0.00,
-                'productos'    => $this->Item->get_all()
-            ]);
-        }
+    $productos = $this->Item->get_all();
 
-        // Con sale_id, procesa venta existente
-        $this->load->model('Sale');
+    // Variables por defecto para facturación manual
+    $razon_social = '';
+    $nit = '';
+    $email = '';
+    $facturas = [];
+    $subtotal = 0.00;
+    $descuento_total = 0.00;
+    $total = 0.00;
+
+    // Si viene un sale_id, entonces cargamos los datos automáticamente
+    if ($sale_id) {
         $venta = $this->Sale->get_detalle_venta_completo($sale_id);
         if (empty($venta)) {
             show_error('Venta no encontrada', 404);
         }
 
-        $row    = $venta[0];
-        $nombre = trim("{$row->name} {$row->last_name}");
-        $razon  = $row->cliente_razon_social ?: $nombre;
+        $cliente = $venta[0];
+        $nombre = trim("{$cliente->name} {$cliente->last_name}");
+        $razon_social = $cliente->cliente_razon_social ?: $nombre;
+        $nit = $cliente->cliente_nit;
+        $email = $cliente->email;
+        $subtotal = $cliente->subtotal;
+        $total = $cliente->total;
 
-        $detalle         = [];
-        $descuento_total = 0.00;
         foreach ($venta as $p) {
             if (!$p->item_id) continue;
 
-            // Calcula descuento de línea y subtotales negativos
-            $m_desc           = $p->item_unit_price * $p->quantity_purchased * ($p->discount_percent / 100);
-            $neg_subt         = $p->item_subtotal < 0 ? abs($p->item_subtotal) : 0;
+            $m_desc = $p->item_unit_price * $p->quantity_purchased * ($p->discount_percent / 100);
+            $neg_subt = $p->item_subtotal < 0 ? abs($p->item_subtotal) : 0;
             $descuento_total += $m_desc + $neg_subt;
 
-            $detalle[] = [
-                'codigo'         => $p->item_id,
-                'cantidad'       => $p->quantity_purchased,
-                'descripcion'    => $p->item_nombre,
-                'preciounitario' => $p->item_unit_price,
-                'descuento'      => $p->discount_percent,
-                'subtotal'       => $p->item_subtotal
+            $facturas[] = [
+                'codigo' => $p->item_id,
+                'cantidad' => (float)$p->quantity_purchased,
+                'descripcion' => $p->item_nombre,
+                'preciounitario' => (float)$p->item_unit_price,
+                'descuento' => (float)$p->discount_percent,
+                'subtotal' => (float)$p->item_subtotal,
             ];
         }
-
-        // Carga la vista con datos de la venta
-        $this->load->view('billing/facturar', [
-            'razon_social' => $razon,
-            'nit'          => $row->cliente_nit,
-            'email'        => $row->email,
-            'facturas'     => $detalle,
-            'subtotal'     => $row->subtotal,
-            'descuento'    => $descuento_total,
-            'total'        => $row->total,
-            'productos'    => $this->Item->get_all()
-        ]);
     }
 
-    // Procesar factura via AJAX
-    public function submit_factura()
-    {
-        $m = json_decode($this->input->post('maestro'));
-        $d = json_decode($this->input->post('detalle'));
-        $resp = $this->call_api(['funcion' => 'procesarFactura', 'maestro' => $m, 'detalle' => $d, 'idven' => $m->idven ?? '0']);
+    // Carga la vista con valores manuales o precargados
+    $this->load->view('billing/facturar', [
+        'razon_social' => $razon_social,
+        'nit' => $nit,
+        'email' => $email,
+        'facturas' => $facturas,
+        'subtotal' => $subtotal,
+        'descuento' => $descuento_total,
+        'total' => $total,
+        'productos' => $productos
+    ]);
+}
 
-        if (!empty($resp['idfac'])) {
-            $this->session->set_userdata(['idfac' => $resp['idfac'], 'cuf' => $resp['cuf']]);
-            $out = ['success' => true, 'idfac' => $resp['idfac']];
-        } else {
-            $out = ['success' => false, 'error' => $resp['error'] ?? $resp];
-        }
-        return $this->output->set_content_type('application/json')->set_output(json_encode($out));
-    }
-
+    ////
     
-    // Códigos
+    // CODIGOS
     public function codigos()
     {
         $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
@@ -250,8 +223,9 @@ class Billing extends Secure_area
         $this->call_api(['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1']);
         redirect('billing/codigos');
     }
+    ////
 
-    // Configuración
+    // CONFIGURACION
     public function configuracion()
     {
         $this->load->view('billing/configuracion');
@@ -264,8 +238,9 @@ class Billing extends Secure_area
     { /* validar y guardar */
         redirect('billing/configuracion');
     }
+    ////
 
-    // Sucursales
+    // SUCURSALES
     public function sucursales()
     {
         $resp = $this->call_api(['funcion' => 'listarSucursales']);
@@ -316,8 +291,9 @@ class Billing extends Secure_area
         $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Sincronización exitosa' : 'Error sincronizando');
         redirect('billing/index');
     }
+    ////
 
-    // Eventos
+    // EVENTOS
     public function eventos()
     {
         $resp = $this->call_api(['funcion' => 'listarEventos', 'ids' => '1']);
@@ -337,7 +313,7 @@ class Billing extends Secure_area
         redirect('billing/eventos');
     }
 
-    // Helper único
+    // HELPER
     private function call_api(array $p)
     {
         $ch = curl_init($this->api_url);
@@ -356,4 +332,5 @@ class Billing extends Secure_area
         }
         return json_decode($raw, true) ?: ['error' => 'JSON inválido'];
     }
+    ////
 }
