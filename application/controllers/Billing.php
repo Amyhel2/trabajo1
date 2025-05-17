@@ -26,7 +26,8 @@ class Billing extends Secure_area
     }
 
     // LISTADO DE FACTURAS
-    public function index() {
+    public function index()
+    {
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
 
@@ -43,7 +44,7 @@ class Billing extends Secure_area
                 'fechainicio' => $inicio,
                 'fechafin'    => $fin
             ]);
-            
+
             $facturas = $resp['facturas'] ?? [];
         } catch (Exception $e) {
             log_message('error', 'Error API: ' . $e->getMessage());
@@ -59,7 +60,8 @@ class Billing extends Secure_area
     }
 
     // Generar y mostrar PDF
-    public function ver_pdf($idfac = null) {
+    public function ver_pdf($idfac = null)
+    {
         $idfac = $idfac ?: $this->session->userdata('idfac');
         if (!$idfac) {
             $this->session->set_flashdata('error', 'Factura no identificada');
@@ -69,7 +71,7 @@ class Billing extends Secure_area
         try {
             // Paso 1: Generar PDF
             $this->call_api(['funcion' => 'generarFacturaPdf', 'idfac' => $idfac]);
-            
+
             // Paso 2: Obtener CUF
             $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? [];
             if (empty($factura['cuf'])) {
@@ -91,7 +93,8 @@ class Billing extends Secure_area
     }
 
     // Enviar por Email
-    public function enviar_email($idfac) {
+    public function enviar_email($idfac)
+    {
         try {
             $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? null;
             if (!$factura) {
@@ -105,7 +108,7 @@ class Billing extends Secure_area
                 'nit'     => $factura['numeroDocumento'],
                 'cuf'     => $factura['cuf']
             ]);
-            
+
 
             if (isset($resp['error'])) {
                 throw new Exception($resp['error']);
@@ -119,11 +122,12 @@ class Billing extends Secure_area
     }
 
     // Anular Factura
-    public function anular_factura($idfac) {
+    public function anular_factura($idfac)
+    {
         try {
             $resp = $this->call_api([
                 'funcion' => 'anularFactura',
-                'ids'     => '1', 
+                'ids'     => '1',
                 'idf'     => $idfac,
                 'motivo'  => '1' // Ajustar según catálogo SIAT
             ]);
@@ -142,68 +146,68 @@ class Billing extends Secure_area
 
     // FACTURAR
     public function facturar($sale_id = null)
-{
-    $this->load->model(['Item', 'Sale']);
+    {
+        $this->load->model(['Item', 'Sale']);
 
-    $productos = $this->Item->get_all();
+        $productos = $this->Item->get_all();
 
-    // Variables por defecto para facturación manual
-    $razon_social = '';
-    $nit = '';
-    $email = '';
-    $facturas = [];
-    $subtotal = 0.00;
-    $descuento_total = 0.00;
-    $total = 0.00;
+        // Variables por defecto para facturación manual
+        $razon_social = '';
+        $nit = '';
+        $email = '';
+        $facturas = [];
+        $subtotal = 0.00;
+        $descuento_total = 0.00;
+        $total = 0.00;
 
-    // Si viene un sale_id, entonces cargamos los datos automáticamente
-    if ($sale_id) {
-        $venta = $this->Sale->get_detalle_venta_completo($sale_id);
-        if (empty($venta)) {
-            show_error('Venta no encontrada', 404);
+        // Si viene un sale_id, entonces cargamos los datos automáticamente
+        if ($sale_id) {
+            $venta = $this->Sale->get_detalle_venta_completo($sale_id);
+            if (empty($venta)) {
+                show_error('Venta no encontrada', 404);
+            }
+
+            $cliente = $venta[0];
+            $nombre = trim("{$cliente->name} {$cliente->last_name}");
+            $razon_social = $cliente->cliente_razon_social ?: $nombre;
+            $nit = $cliente->cliente_nit;
+            $email = $cliente->email;
+            $subtotal = $cliente->subtotal;
+            $total = $cliente->total;
+
+            foreach ($venta as $p) {
+                if (!$p->item_id) continue;
+
+                $m_desc = $p->item_unit_price * $p->quantity_purchased * ($p->discount_percent / 100);
+                $neg_subt = $p->item_subtotal < 0 ? abs($p->item_subtotal) : 0;
+                $descuento_total += $m_desc + $neg_subt;
+
+                $facturas[] = [
+                    'codigo' => $p->item_id,
+                    'cantidad' => (float)$p->quantity_purchased,
+                    'descripcion' => $p->item_nombre,
+                    'preciounitario' => (float)$p->item_unit_price,
+                    'descuento' => (float)$p->discount_percent,
+                    'subtotal' => (float)$p->item_subtotal,
+                ];
+            }
         }
 
-        $cliente = $venta[0];
-        $nombre = trim("{$cliente->name} {$cliente->last_name}");
-        $razon_social = $cliente->cliente_razon_social ?: $nombre;
-        $nit = $cliente->cliente_nit;
-        $email = $cliente->email;
-        $subtotal = $cliente->subtotal;
-        $total = $cliente->total;
-
-        foreach ($venta as $p) {
-            if (!$p->item_id) continue;
-
-            $m_desc = $p->item_unit_price * $p->quantity_purchased * ($p->discount_percent / 100);
-            $neg_subt = $p->item_subtotal < 0 ? abs($p->item_subtotal) : 0;
-            $descuento_total += $m_desc + $neg_subt;
-
-            $facturas[] = [
-                'codigo' => $p->item_id,
-                'cantidad' => (float)$p->quantity_purchased,
-                'descripcion' => $p->item_nombre,
-                'preciounitario' => (float)$p->item_unit_price,
-                'descuento' => (float)$p->discount_percent,
-                'subtotal' => (float)$p->item_subtotal,
-            ];
-        }
+        // Carga la vista con valores manuales o precargados
+        $this->load->view('billing/facturar', [
+            'razon_social' => $razon_social,
+            'nit' => $nit,
+            'email' => $email,
+            'facturas' => $facturas,
+            'subtotal' => $subtotal,
+            'descuento' => $descuento_total,
+            'total' => $total,
+            'productos' => $productos
+        ]);
     }
 
-    // Carga la vista con valores manuales o precargados
-    $this->load->view('billing/facturar', [
-        'razon_social' => $razon_social,
-        'nit' => $nit,
-        'email' => $email,
-        'facturas' => $facturas,
-        'subtotal' => $subtotal,
-        'descuento' => $descuento_total,
-        'total' => $total,
-        'productos' => $productos
-    ]);
-}
-
     ////
-    
+
     // CODIGOS
     public function codigos()
     {
@@ -235,7 +239,7 @@ class Billing extends Secure_area
         $this->load->view('billing/editarConfiguracion');
     }
     public function guardarConfiguracion()
-    { /* validar y guardar */
+    {
         redirect('billing/configuracion');
     }
     ////
@@ -292,7 +296,7 @@ class Billing extends Secure_area
         redirect('billing/index');
     }
     ////
-
+    
     // EVENTOS
     public function eventos()
     {
