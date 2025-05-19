@@ -13,17 +13,7 @@ $this->load->view("partial/header_facturacion");
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <div class="row">
-              <div class="col-md-4 mb-3">
-                <label>Adicionar Item:</label>
-                <select id="producto_select" class="form-control" required>
-                  <option value="">Seleccione un producto</option>
-                  <?php foreach ($productos as $prod): ?>
-                    <option value="<?= $prod->item_id ?>" data-stock="<?= $prod->quantity_available ?>" data-price="<?= $prod->unit_price ?>">
-                      <?= htmlspecialchars($prod->name) ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
+              
 
               <div class="col-md-4 mb-3">
                 <label for="codbar">Codigo (Barras):</label>
@@ -46,9 +36,7 @@ $this->load->view("partial/header_facturacion");
                   <option value="1">CI - CÉDULA DE IDENTIDAD</option>
                 </select>
               </div>
-            </div>
-            <div class="row">
-              
+
               <div class="col-md-4 mb-3">
                 <label for="codbar">NIT/CI:</label>
                 <ul class="list-inline">
@@ -64,16 +52,20 @@ $this->load->view("partial/header_facturacion");
                   </li>
                 </ul>
               </div>
+            </div>
+            <div class="row">
+              
+              
 
-              <div class="col-md-2 mb-3">
+              <div class="col-md-4 mb-3">
                 <label>Complemento:</label>
                 <input type="text" id="complemento_ci" class="form-control">
               </div>
-              <div class="col-md-3 mb-3">
+              <div class="col-md-4 mb-3">
                 <label>Razón Social:</label>
                 <input type="text" id="razon_social" class="form-control" value="<?= htmlspecialchars($razon_social) ?>" required>
               </div>
-              <div class="col-md-3 mb-3">
+              <div class="col-md-4 mb-3">
                 <label>Correo electrónico:</label>
                 <input type="email" id="email_cliente" class="form-control" value="<?= htmlspecialchars($email) ?>" required>
               </div>
@@ -167,10 +159,10 @@ $this->load->view("partial/header_facturacion");
         <tr data-index="${i}">
           <td>${i+1}</td>
           <td>${d.codigo}</td>
-          <td><input type="number" min="1" value="${d.cantidad}" class="form-control qty"></td>
+          <td>${d.cantidad}</td>
           <td>${d.descripcion}</td>
           <td>${d.preciounitario.toFixed(2)}</td>
-          <td><input type="number" min="0" max="100" value="${d.descuento}" class="form-control disc"></td>
+          <td>${d.descuento}</td>
           <td class="sub">${subtotal.toFixed(2)}</td>
           <td><button class="btn btn-sm btn-danger btn-remove"><i class="fa fa-trash"></i></button></td>
         </tr>

@@ -26,8 +26,8 @@
 <ul class="nav nav-pills nav-facturacion">
   <li class="nav-item">
     <a class="nav-link <?php echo uri_string() == 'billing/index' ? 'active' : ''; ?>" href="<?php echo site_url('billing/index'); ?>">
-      <i class="fa fa-list"></i> Listado Facturas
-    </a>
+      <i class="fa fa-list"></i> Facturas Emitidas
+   </a>
   </li>
   <li class="nav-item">
     <a class="nav-link <?php echo uri_string() == 'billing/facturar' ? 'active' : ''; ?>" href="<?php echo site_url('billing/facturar'); ?>">

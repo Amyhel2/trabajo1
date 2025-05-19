@@ -316,6 +316,7 @@ class Billing extends Secure_area
         $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Evento creado' : 'Error creando evento');
         redirect('billing/eventos');
     }
+    
 
     // HELPER
     private function call_api(array $p)
