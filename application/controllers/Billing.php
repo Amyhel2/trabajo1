@@ -269,10 +269,13 @@ class Billing extends Secure_area
 
 public function sucursales()
 {
-    // ——— Sincronización y guardado de sucursales ———
-    $resp = $this->call_api(['funcion' => 'listarSucursales']);
-    $datos_api = $resp['sucursales']['data'] ?? [];
-    foreach ($datos_api as $s) {
+    // 1) Carga de modelos (para sucursales locales)
+    $this->load->model('Sucursal_model');
+
+    // 2) Listar sucursales desde la API y guardar localmente
+    $respSuc = $this->call_api(['funcion' => 'listarSucursales']);
+    $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
+    foreach ($sucursalesApi as $s) {
         $this->Sucursal_model->guardar_o_actualizar([
             'codigo_sucursal' => $s['codigoSucursal'],
             'nombre'          => $s['nombreSucursal'],
@@ -283,36 +286,18 @@ public function sucursales()
         ]);
     }
 
-    // ——— Obtener desde BD local ———
+    // 3) Obtener sucursales desde la BD local para la vista
     $sucursales = $this->Sucursal_model->obtener_todas();
 
-    // ——— Sincronización y guardado de puntos de venta ———
-    // Llamada API para traerlos
-    $resp2 = $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
-    $datos_pv = $resp2['puntosVenta']['data'] ?? [];
-    foreach ($datos_pv as $pv) {
-        // necesitas mapear id_sucursal local: buscá el registro por codigo_sucursal
-        $suc_local = $this->db
-            ->where('codigo_sucursal', $pv['nroSucursal'])
-            ->get('sucursales_siat')
-            ->row();
-        if (!$suc_local) continue;
-        $this->PuntoVenta_model->guardar_o_actualizar([
-            'id_sucursal'      => $suc_local->id,
-            'nro_punto_venta'  => $pv['nroPuntoVenta'],
-            'nombre'           => $pv['nombrePuntoVenta'],
-            'tipo_punto_venta' => $pv['tipoPuntoVenta'],
-            'tipo_emision'     => $pv['tipoEmision'],
-        ]);
-    }
+    // 4) Listar puntos de venta desde la API (función listarPos)
+    $respPdv = $this->call_api(['funcion' => 'listarPos']);
+    // según tu API, puede venir en respPdv['puntos'] o respPdv['data']
+    $puntosApi = $respPdv['puntos'] ?? $respPdv['data'] ?? [];
 
-    // ——— Obtener todos los puntos de venta ya guardados ———
-    $puntos = $this->PuntoVenta_model->obtener_todos();
-
-    // ——— Cargar la vista ———
+    // 5) Pasar ambas colecciones a la vista
     $this->load->view('billing/sucursales', [
         'sucursales' => $sucursales,
-        'puntos'     => $puntos
+        'puntos'     => $puntosApi
     ]);
 }
 
