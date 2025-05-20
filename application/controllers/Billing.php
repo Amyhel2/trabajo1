@@ -8,6 +8,9 @@ require_once APPPATH . "traits/taxOverrideTrait.php";
 require_once APPPATH . "traits/creditcardProcessingTrait.php";
 require_once APPPATH . "traits/emailSalesReceiptTrait.php";
 require_once APPPATH . "libraries/Fatoora.php";
+require_once(APPPATH . "traits/saleTrait.php");
+
+
 
 class Billing extends Secure_area
 {
@@ -20,36 +23,36 @@ class Billing extends Secure_area
     public function __construct()
     {
         parent::__construct();
-        $this->load->helper(['form', 'url']);
+        $this->load->helper(['form','url']);
         $this->load->library('session');
+        $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
+
+        // Carga tu librería de cURL si la tienes, sino usa directamente curl_exec
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-    // LISTADO DE FACTURAS
+    // 1. Listado de facturas
     public function index()
     {
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
 
-        // Validación de fechas
         if ($inicio > $fin) {
             $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
             redirect('billing/index');
         }
 
-        try {
-            $resp = $this->call_api([
-                'funcion'     => 'listarFacturas',
-                'ids'         => '1',
-                'fechainicio' => $inicio,
-                'fechafin'    => $fin
-            ]);
-
-            $facturas = $resp['facturas'] ?? [];
-        } catch (Exception $e) {
-            log_message('error', 'Error API: ' . $e->getMessage());
-            $this->session->set_flashdata('error', 'Error al conectar con el servicio de facturación');
-            $facturas = [];
+        $facturas = [];
+        $resp = $this->call_api([
+            'funcion'     => 'listarFacturas',
+            'ids'         => '1',
+            'fechainicio' => $inicio,
+            'fechafin'    => $fin
+        ]);
+        if (isset($resp['facturas'])) {
+            $facturas = $resp['facturas'];
+        } else {
+            $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
         }
 
         $this->load->view('billing/index', [
@@ -59,91 +62,106 @@ class Billing extends Secure_area
         ]);
     }
 
-    // Generar y mostrar PDF
+    // 2. Ver / Descargar PDF
     public function ver_pdf($idfac = null)
     {
-        $idfac = $idfac ?: $this->session->userdata('idfac');
         if (!$idfac) {
             $this->session->set_flashdata('error', 'Factura no identificada');
             redirect('billing/index');
         }
 
-        try {
-            // Paso 1: Generar PDF
-            $this->call_api(['funcion' => 'generarFacturaPdf', 'idfac' => $idfac]);
+        // Generar el PDF en el servidor de la API
+        $pdfOk = $this->call_api([
+            'funcion' => 'generarFacturaPdf',
+            'idfac'   => $idfac
+        ]);
 
-            // Paso 2: Obtener CUF
-            $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? [];
-            if (empty($factura['cuf'])) {
-                throw new Exception("Código CUF no disponible");
-            }
-            $pdf_path = FCPATH . "Siat/temp/factura-{$factura['cuf']}.pdf";
-            if (!file_exists($pdf_path)) {
-                throw new Exception("Archivo PDF no generado");
-            }
-
-            header('Content-Type: application/pdf');
-            readfile($pdf_path);
-            exit;
-        } catch (Exception $e) {
-            log_message('error', 'Error PDF: ' . $e->getMessage());
-            $this->session->set_flashdata('error', 'No se pudo generar el PDF: ' . $e->getMessage());
+        if (empty($pdfOk) || $pdfOk === false) {
+            $this->session->set_flashdata('error', 'No se pudo generar el PDF');
             redirect('billing/index');
         }
+
+        // Obtener el CUF para localizar el archivo
+        $detalle = $this->call_api([
+            'funcion' => 'listarFacturas',
+            'ids'     => '1',
+            'fechainicio' => date('Y-m-d'),
+            'fechafin'    => date('Y-m-d')
+        ]);
+        // mejor: traer por idfac, pero la API no filtra por idfac en listarFacturas
+        $factura = null;
+        foreach ($detalle['facturas'] ?? [] as $f) {
+            if ($f['id'] == $idfac) { $factura = $f; break; }
+        }
+        if (!$factura || empty($factura['cuf'])) {
+            $this->session->set_flashdata('error', 'No se encontró CUF para la factura');
+            redirect('billing/index');
+        }
+
+        $path = FCPATH . "Siat/temp/factura-{$factura['cuf']}.pdf";
+        if (!file_exists($path)) {
+            $this->session->set_flashdata('error', 'Archivo PDF no encontrado');
+            redirect('billing/index');
+        }
+
+        header('Content-Type: application/pdf');
+        readfile($path);
+        exit;
     }
 
-    // Enviar por Email
+    // 3. Enviar por email
     public function enviar_email($idfac)
     {
-        try {
-            $factura = $this->call_api(['funcion' => 'listarFacturas', 'idfac' => $idfac])['facturas'][0] ?? null;
-            if (!$factura) {
-                throw new Exception("Factura no encontrada");
-            }
-
-            $resp = $this->call_api([
-                'funcion' => 'enviarMailFactura',
-                'mail'    => $factura['email'],
-                'rzs'     => $factura['nombreRazonSocial'],
-                'nit'     => $factura['numeroDocumento'],
-                'cuf'     => $factura['cuf']
-            ]);
-
-
-            if (isset($resp['error'])) {
-                throw new Exception($resp['error']);
-            }
-
-            $this->session->set_flashdata('success', 'Email enviado correctamente');
-        } catch (Exception $e) {
-            $this->session->set_flashdata('error', 'Error: ' . $e->getMessage());
+        // Obtener datos de factura
+        $resp = $this->call_api([
+            'funcion' => 'listarFacturas',
+            'ids'     => '1',
+            'fechainicio' => date('Y-m-d'),
+            'fechafin'    => date('Y-m-d')
+        ]);
+        $factura = null;
+        foreach ($resp['facturas'] ?? [] as $f) {
+            if ($f['id'] == $idfac) { $factura = $f; break; }
         }
+
+        if (!$factura || empty($factura['email'])) {
+            $this->session->set_flashdata('error', 'No hay correo electrónico disponible para esta factura');
+            redirect('billing/index');
+        }
+
+        $res = $this->call_api([
+            'funcion' => 'enviarMailFactura',
+            'mail'    => $factura['email'],
+            'rzs'     => $factura['nombreRazonSocial'],
+            'nit'     => $factura['numeroDocumento'],
+            'cuf'     => $factura['cuf']
+        ]);
+        if (isset($res['correo'])) {
+            $this->session->set_flashdata('success', 'Factura enviada por email');
+        } else {
+            $this->session->set_flashdata('error', $res['error'] ?? 'Error al enviar email');
+        }
+
         redirect('billing/index');
     }
 
-    // Anular Factura
+    // 4. Anular factura
     public function anular_factura($idfac)
     {
-        try {
-            $resp = $this->call_api([
-                'funcion' => 'anularFactura',
-                'ids'     => '1',
-                'idf'     => $idfac,
-                'motivo'  => '1' // Ajustar según catálogo SIAT
-            ]);
-
-            if (empty($resp['res'])) {
-                throw new Exception("Respuesta inválida del servidor");
-            }
-
+        $res = $this->call_api([
+            'funcion' => 'anularFactura',
+            'ids'     => '1',
+            'idf'     => $idfac,
+            'motivo'  => '1'
+        ]);
+        if (!empty($res) && ($res === true || isset($res['res']) && $res['res'] === true)) {
             $this->session->set_flashdata('success', 'Factura anulada correctamente');
-        } catch (Exception $e) {
-            $this->session->set_flashdata('error', 'Error al anular: ' . $e->getMessage());
+        } else {
+            $this->session->set_flashdata('error', $res['error'] ?? 'Error al anular factura');
         }
         redirect('billing/index');
     }
-    ////
-
+   ////
     // FACTURAR
     public function facturar($sale_id = null)
     {
@@ -246,20 +264,65 @@ class Billing extends Secure_area
 
     // SUCURSALES
     public function sucursales()
-    {
-        $resp = $this->call_api(['funcion' => 'listarSucursales']);
-        $this->load->view('billing/sucursales', ['sucursales' => $resp['sucursales']['data'] ?? []]);
+{
+    $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
+
+    $resp = $this->call_api(['funcion' => 'listarSucursales']);
+    $datos_api = $resp['sucursales']['data'] ?? [];
+
+    foreach ($datos_api as $sucursal) {
+        $this->Sucursal_model->guardar_o_actualizar([
+            'codigo_sucursal' => $sucursal['codigoSucursal'],
+            'nombre'          => $sucursal['nombreSucursal'],
+            'direccion'       => $sucursal['direccionSucursal'],
+            'responsable'     => $sucursal['responsableSucursal'],
+            'telefono'        => $sucursal['telefonoSucursal'],
+            'celular'         => $sucursal['celularSucursal'],
+        ]);
     }
+
+    $sucursales = $this->Sucursal_model->obtener_todas();
+    $puntos     = $this->PuntoVenta_model->obtener_todos(); // ⬅ NUEVO
+
+    $this->load->view('billing/sucursales', [
+        'sucursales' => $sucursales,
+        'puntos'     => $puntos
+    ]);
+}
+
+
     public function sincronizar_sucursales()
     {
         $this->call_api(['funcion' => 'listarSucursales']);
         redirect('billing/sucursales');
     }
     public function sincronizar_puntos()
-    {
-        $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
-        redirect('billing/sucursales');
+{
+    $this->load->model('PuntoVenta_model');
+    $resp = $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
+    $datos_api = $resp['puntos']['data'] ?? [];
+
+    foreach ($datos_api as $p) {
+        // Buscar id_sucursal localmente por el código
+        $sucursal = $this->db
+            ->where('codigo_sucursal', $p['nroSucursal'])
+            ->get('sucursales_siat')
+            ->row();
+
+        if ($sucursal) {
+            $this->PuntoVenta_model->guardar_o_actualizar([
+                'id_sucursal'      => $sucursal->id,
+                'nro_punto_venta'  => $p['nroPuntoVenta'],
+                'nombre'           => $p['nombrePuntoVenta'],
+                'tipo_punto_venta' => $p['tipoPuntoVenta'],
+                'tipo_emision'     => $p['tipoEmision']
+            ]);
+        }
     }
+
+    redirect('billing/sucursales#puntosDeVenta');
+}
+
     public function nuevaSucursal()
     {
         $this->load->view('billing/crearSucursal');
@@ -318,24 +381,29 @@ class Billing extends Secure_area
     }
     
 
-    // HELPER
-    private function call_api(array $p)
+    // HELPER: Llama a la API con timeout y logging
+    private function call_api(array $params)
     {
         $ch = curl_init($this->api_url);
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($p)]);
-        $raw = curl_exec($ch);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($params)
+        ]);
+        $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err  = curl_error($ch);
         curl_close($ch);
-        if ($err) {
-            log_message('error', 'API-CURL: ' . $err);
-            return ['error' => 'Comunicación fallida'];
+
+        if ($err || $code !== 200) {
+            log_message('error', "API ERROR [{$code}]: {$err} | Response: {$raw}");
+            return ['error' => 'Error de conexión con la API'];
         }
-        if ($code !== 200) {
-            log_message('error', 'API-HTTP ' . $code . ': ' . $raw);
-            return ['error' => 'HTTP ' . $code];
-        }
-        return json_decode($raw, true) ?: ['error' => 'JSON inválido'];
+
+        $json = json_decode($raw, true);
+        return $json ?: ['error' => 'Respuesta inválida del servidor'];
     }
     ////
 }
