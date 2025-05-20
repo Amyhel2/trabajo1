@@ -41,4 +41,9 @@ use saleTrait;
             ->where('id', $id)
             ->update($this->table, ['pdf_generado' => 1]);
     }
+
+    public function obtener_todos() {
+    return $this->db->get('puntos_venta_siat')->result();
+}
+
 }

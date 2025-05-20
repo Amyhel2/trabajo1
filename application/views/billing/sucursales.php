@@ -14,7 +14,9 @@ $this->load->view("partial/header_facturacion");
         <li role="presentation" class="active">
           <a href="#sucursales" data-toggle="tab"><i class="fa fa-briefcase"></i> Sucursales</a>
         </li>
-        <li role="presentation"><a href="#puntosDeVenta" data-toggle="tab"><i class="fa fa-boxes"></i> Punto de Venta</a></li>
+        <li role="presentation">
+          <a href="#puntosDeVenta" data-toggle="tab"><i class="fa fa-boxes"></i> Punto de Venta</a>
+        </li>
       </ul>
     </div>
 
@@ -22,22 +24,19 @@ $this->load->view("partial/header_facturacion");
     <div class="col-md-9">
       <div class="tab-content p-3 card shadow-sm bg-white rounded">
 
+        <!-- SUCURSALES -->
         <div class="tab-pane fade in active" id="sucursales">
-
           <div class="row mt-3">
             <div class="col-md-8">
-
               <h4><i class="fa fa-qrcode text-primary"></i> Listado de Sucursales</h4>
             </div>
-
             <div class="col-md-4" style="text-align: right;">
-              <a href="<?php echo site_url('billing/nuevaSucursal'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
+              <a href="<?= site_url('billing/nuevaSucursal'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
                 <span class="ion-plus"></span> Nuevo
               </a>
             </div>
           </div>
           <br>
-          <!-- Tabla de resultados -->
           <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
               <strong><i class="fa fa-list"></i> Resultados</strong>
@@ -50,91 +49,107 @@ $this->load->view("partial/header_facturacion");
                       <th>#</th>
                       <th>Sucursal</th>
                       <th>Responsable</th>
-                      <th>Telefono</th>
+                      <th>Teléfono</th>
                       <th>Celular</th>
-                      <th>Direccion</th>
-                      <th></th>
+                      <th>Dirección</th>
+                      <th>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-  <?php if (!empty($sucursales)) : ?>
-    <?php $i = 1; foreach ($sucursales as $sucursal) : ?>
-      <tr>
-        <td><?= $i++; ?></td>
-        <td><?= htmlspecialchars($sucursal->nombre) ?></td>
-        <td><?= htmlspecialchars($sucursal->responsable) ?></td>
-        <td><?= htmlspecialchars($sucursal->telefono) ?></td>
-        <td><?= htmlspecialchars($sucursal->celular) ?></td>
-        <td><?= htmlspecialchars($sucursal->direccion) ?></td>
-        <td>
-          <a href="<?= site_url('billing/editarSucursal/' . $sucursal->id) ?>"
-             class="btn btn-info btn-lg hidden-sm hidden-xs"
-             title="Editar sucursal">
-            <span class="ion-edit">Editar</span>
-          </a>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-  <?php else : ?>
-    <tr>
-      <td colspan="7" class="text-center text-muted p-3">
-        <i class="fa fa-info-circle"></i> No hay sucursales a mostrar.
-      </td>
-    </tr>
-  <?php endif; ?>
-</tbody>
-
-
+                    <?php if (!empty($sucursales)) : ?>
+                      <?php $i = 1; foreach ($sucursales as $sucursal) : ?>
+                        <tr>
+                          <td><?= $i++; ?></td>
+                          <td><?= htmlspecialchars($sucursal->nombre) ?></td>
+                          <td><?= htmlspecialchars($sucursal->responsable) ?></td>
+                          <td><?= htmlspecialchars($sucursal->telefono) ?></td>
+                          <td><?= htmlspecialchars($sucursal->celular) ?></td>
+                          <td><?= htmlspecialchars($sucursal->direccion) ?></td>
+                          <td>
+                            <a href="<?= site_url('billing/editarSucursal/' . $sucursal->id) ?>"
+                               class="btn btn-info btn-lg hidden-sm hidden-xs"
+                               title="Editar sucursal">
+                              <span class="ion-edit">Editar</span>
+                            </a>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php else : ?>
+                      <tr>
+                        <td colspan="7" class="text-center text-muted p-3">
+                          <i class="fa fa-info-circle"></i> No hay sucursales a mostrar.
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+                  </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
 
-       <div class="tab-pane fade" id="puntosDeVenta">
-  <!-- ... cabecera y botones ... -->
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-striped table-hover mb-0">
-        <thead class="thead-dark">
-          <tr>
-            <th>#</th>
-            <th>N° Sucursal</th>
-            <th>N° Punto de Venta</th>
-            <th>Nombre PV</th>
-            <th>Tipo PV</th>
-            <th>Emisión</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (!empty($puntos)) : ?>
-            <?php $j = 1; foreach ($puntos as $pv) : ?>
-              <tr>
-                <td><?= $j++ ?></td>
-                <td><?= htmlspecialchars($pv['nroSucursal']) ?></td>
-                <td><?= htmlspecialchars($pv['nroPuntoVenta']) ?></td>
-                <td><?= htmlspecialchars($pv['nombrePuntoVenta']) ?></td>
-                <td><?= htmlspecialchars($pv['tipoPuntoVenta']) ?></td>
-                <td><?= htmlspecialchars($pv['tipoEmision']) ?></td>
-              </tr>
-            <?php endforeach; ?>
-          <?php else : ?>
-            <tr>
-              <td colspan="6" class="text-center text-muted p-3">
-                <i class="fa fa-info-circle"></i> No hay puntos de venta a mostrar.
-              </td>
-            </tr>
-          <?php endif; ?>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-      </div>
+        <!-- PUNTOS DE VENTA -->
+        <div class="tab-pane fade" id="puntosDeVenta">
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <h4><i class="fa fa-qrcode text-primary"></i> Listado Puntos de Venta</h4>
+            </div>
+            <div class="col-md-4 text-right">
+              <a href="<?= site_url('billing/crearPuntoVenta'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
+                <span class="ion-plus"></span> Nuevo
+              </a>
+              <a href="<?= site_url('billing/sincronizar_puntos'); ?>" class="btn btn-warning btn-lg hidden-sm hidden-xs" title="Sincronizar">
+                <span class="ion-loop"></span> Sincronizar
+              </a>
+            </div>
+          </div>
+          <br>
+          <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+              <strong><i class="fa fa-list"></i> Resultados</strong>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th>#</th>
+                      <th>N° Sucursal</th>
+                      <th>N° Punto de Venta</th>
+                      <th>Nombre PV</th>
+                      <th>Tipo PV</th>
+                      <th>Emisión</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if (!empty($puntos)) : ?>
+                      <?php $j = 1; foreach ($puntos as $pv) : ?>
+                        <tr>
+                          <td><?= $j++; ?></td>
+                          <td><?= htmlspecialchars($pv->id_sucursal) ?></td>
+                          <td><?= htmlspecialchars($pv->nro_punto_venta) ?></td>
+                          <td><?= htmlspecialchars($pv->nombre) ?></td>
+                          <td><?= htmlspecialchars($pv->tipo_punto_venta) ?></td>
+                          <td><?= htmlspecialchars($pv->tipo_emision) ?></td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php else : ?>
+                      <tr>
+                        <td colspan="6" class="text-center text-muted p-3">
+                          <i class="fa fa-info-circle"></i> No hay puntos de venta a mostrar.
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    </div>
-  </div>
-</div>
+      </div> <!-- /.tab-content -->
+    </div> <!-- /.col-md-9 -->
+  </div> <!-- /.row -->
 </div>
 
 <style>
@@ -159,5 +174,3 @@ $this->load->view("partial/header_facturacion");
 </script>
 
 <?php $this->load->view("partial/footer"); ?>
-
-

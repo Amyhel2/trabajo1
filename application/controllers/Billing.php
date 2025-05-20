@@ -269,12 +269,15 @@ class Billing extends Secure_area
 
 public function sucursales()
 {
-    // 1) Carga de modelos (para sucursales locales)
-    $this->load->model('Sucursal_model');
+    // Cargar modelos
+    $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
 
-    // 2) Listar sucursales desde la API y guardar localmente
+    // =========================
+    // 1. Listar Sucursales API
+    // =========================
     $respSuc = $this->call_api(['funcion' => 'listarSucursales']);
     $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
+
     foreach ($sucursalesApi as $s) {
         $this->Sucursal_model->guardar_o_actualizar([
             'codigo_sucursal' => $s['codigoSucursal'],
@@ -286,20 +289,37 @@ public function sucursales()
         ]);
     }
 
-    // 3) Obtener sucursales desde la BD local para la vista
-    $sucursales = $this->Sucursal_model->obtener_todas();
-
-    // 4) Listar puntos de venta desde la API (función listarPos)
+    // ===============================
+    // 2. Listar Puntos de Venta API
+    // ===============================
     $respPdv = $this->call_api(['funcion' => 'listarPos']);
-    // según tu API, puede venir en respPdv['puntos'] o respPdv['data']
-    $puntosApi = $respPdv['puntos'] ?? $respPdv['data'] ?? [];
+    $puntosApi = $respPdv['dat'] ?? ['data'];
 
-    // 5) Pasar ambas colecciones a la vista
+    foreach ($puntosApi as $pv) {
+        $this->PuntoVenta_model->guardar_o_actualizar([
+            'id_sucursal'      => $pv['nroSucursal'],
+            'nro_punto_venta'  => $pv['nroPuntoVenta'],
+            'nombre'           => $pv['nombrePuntoVenta'],
+            'tipo_punto_venta' => $pv['tipoPuntoVenta'],
+            'tipo_emision'     => $pv['tipoEmision'],
+        ]);
+    }
+
+    // ==========================
+    // 3. Leer desde BD local
+    // ==========================
+    $sucursales = $this->Sucursal_model->obtener_todas();
+    $puntos     = $this->PuntoVenta_model->obtener_todos();
+
+    // ==========================
+    // 4. Mostrar vista
+    // ==========================
     $this->load->view('billing/sucursales', [
         'sucursales' => $sucursales,
-        'puntos'     => $puntosApi
+        'puntos'     => $puntos
     ]);
 }
+
 
 
     public function sincronizar_sucursales()
