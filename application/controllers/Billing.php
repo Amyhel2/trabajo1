@@ -31,6 +31,8 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
+  
+
     // 1. Listado de facturas
     public function index()
     {
@@ -263,27 +265,51 @@ class Billing extends Secure_area
     ////
 
     // SUCURSALES
-    public function sucursales()
-{
-    $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
+  
 
+public function sucursales()
+{
+    // ——— Sincronización y guardado de sucursales ———
     $resp = $this->call_api(['funcion' => 'listarSucursales']);
     $datos_api = $resp['sucursales']['data'] ?? [];
-
-    foreach ($datos_api as $sucursal) {
+    foreach ($datos_api as $s) {
         $this->Sucursal_model->guardar_o_actualizar([
-            'codigo_sucursal' => $sucursal['codigoSucursal'],
-            'nombre'          => $sucursal['nombreSucursal'],
-            'direccion'       => $sucursal['direccionSucursal'],
-            'responsable'     => $sucursal['responsableSucursal'],
-            'telefono'        => $sucursal['telefonoSucursal'],
-            'celular'         => $sucursal['celularSucursal'],
+            'codigo_sucursal' => $s['codigoSucursal'],
+            'nombre'          => $s['nombreSucursal'],
+            'direccion'       => $s['direccionSucursal'],
+            'responsable'     => $s['responsableSucursal'],
+            'telefono'        => $s['telefonoSucursal'],
+            'celular'         => $s['celularSucursal'],
         ]);
     }
 
+    // ——— Obtener desde BD local ———
     $sucursales = $this->Sucursal_model->obtener_todas();
-    $puntos     = $this->PuntoVenta_model->obtener_todos(); // ⬅ NUEVO
 
+    // ——— Sincronización y guardado de puntos de venta ———
+    // Llamada API para traerlos
+    $resp2 = $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
+    $datos_pv = $resp2['puntosVenta']['data'] ?? [];
+    foreach ($datos_pv as $pv) {
+        // necesitas mapear id_sucursal local: buscá el registro por codigo_sucursal
+        $suc_local = $this->db
+            ->where('codigo_sucursal', $pv['nroSucursal'])
+            ->get('sucursales_siat')
+            ->row();
+        if (!$suc_local) continue;
+        $this->PuntoVenta_model->guardar_o_actualizar([
+            'id_sucursal'      => $suc_local->id,
+            'nro_punto_venta'  => $pv['nroPuntoVenta'],
+            'nombre'           => $pv['nombrePuntoVenta'],
+            'tipo_punto_venta' => $pv['tipoPuntoVenta'],
+            'tipo_emision'     => $pv['tipoEmision'],
+        ]);
+    }
+
+    // ——— Obtener todos los puntos de venta ya guardados ———
+    $puntos = $this->PuntoVenta_model->obtener_todos();
+
+    // ——— Cargar la vista ———
     $this->load->view('billing/sucursales', [
         'sucursales' => $sucursales,
         'puntos'     => $puntos

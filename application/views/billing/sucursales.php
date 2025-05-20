@@ -127,16 +127,17 @@ $this->load->view("partial/header_facturacion");
                       <th>Emision</th>
                     </tr>
                   </thead>
+                  
                   <tbody>
   <?php if (!empty($puntos)) : ?>
     <?php $j = 1; foreach ($puntos as $pv) : ?>
       <tr>
         <td><?= $j++; ?></td>
-        <td><?= $pv->id_sucursal ?></td>
-        <td><?= $pv->nro_punto_venta ?></td>
-        <td><?= $pv->nombre ?></td>
-        <td><?= $pv->tipo_punto_venta ?></td>
-        <td><?= $pv->tipo_emision ?></td>
+        <td><?= htmlspecialchars($pv->id_sucursal) ?></td>
+        <td><?= htmlspecialchars($pv->nro_punto_venta) ?></td>
+        <td><?= htmlspecialchars($pv->nombre) ?></td>
+        <td><?= htmlspecialchars($pv->tipo_punto_venta) ?></td>
+        <td><?= htmlspecialchars($pv->tipo_emision) ?></td>
       </tr>
     <?php endforeach; ?>
   <?php else : ?>
@@ -147,6 +148,7 @@ $this->load->view("partial/header_facturacion");
     </tr>
   <?php endif; ?>
 </tbody>
+
 
 
                 </table>
