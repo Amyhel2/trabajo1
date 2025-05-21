@@ -4,177 +4,164 @@ $this->load->view("partial/header_facturacion");
 ?>
 
 <div class="container-fluid mt-4">
-    <h4 class="mb-3">
-        <i class="fa fa-qrcode text-primary"></i> Códigos SIAT
-    </h4>
+  <h4 class="mb-3"><i class="fa fa-qrcode text-primary"></i> Códigos SIAT</h4>
 
-<div class="row">
+  <!-- Flash messages -->
+  <?php if ($msg = $this->session->flashdata('success')): ?>
+    <div class="alert alert-success"><?= $msg ?></div>
+  <?php elseif ($msg = $this->session->flashdata('error')): ?>
+    <div class="alert alert-danger"><?= $msg ?></div>
+  <?php endif; ?>
+
+  <div class="row">
     <!-- Menú lateral -->
     <div class="col-md-3">
-        <ul class="nav nav-pills nav-stacked custom-pills config-nav" role="tablist">
-            <li role="presentation" class="active">
-                <a href="#codigosCufd" data-toggle="tab"><i class="fa fa-briefcase"></i> CUFD</a>
-            </li>
-            <li role="presentation">
-                <a href="#codigosCuis" data-toggle="tab"><i class="fa fa-boxes"></i> CUIS</a>
-            </li>
-        </ul>
+      <ul class="nav flex-column nav-pills config-nav" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" data-toggle="pill" href="#codigosCufd">CUFD</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="pill" href="#codigosCuis">CUIS</a>
+        </li>
+      </ul>
     </div>
 
-    <!-- Paneles de contenido -->
+    <!-- Contenido -->
     <div class="col-md-9">
-        <div class="tab-content p-3 card shadow-sm bg-white rounded">
+      <div class="tab-content card shadow-sm bg-white rounded p-3">
 
-            <!-- CUFD -->
-            <div class="tab-pane fade in active" id="codigosCufd">
-                <div class="row mt-3">
-                    <div class="col-md-8">
-                        <h4><i class="fa fa-qrcode text-primary"></i> Listado CUFD</h4>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <a href="<?php echo site_url('billing/obtener_cufd'); ?>" class="btn btn-warning btn-lg" title="Sincronizar CUFD">
-                            <span class="ion-loop"></span> Sincronizar
-                        </a>
-                    </div>
-                </div>
-                <br>
-
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <strong><i class="fa fa-list"></i> Resultados CUFD</strong>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th>#</th>                                      
-                                        <th>Fecha Registro</th>
-                                        <th>Fecha Vigencia</th>
-                                        <th>Sucursal</th>
-                                        <th>Punto Venta</th>
-                                        <th>CUFD</th>
-                                        <th>Código Control</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($cufds)): ?>
-                                        <?php $i = 1; foreach ($cufds as $cufd): ?>
-                                            <tr>
-                                                <td><?php echo $i++; ?></td>
-                                                <td><?php echo $cufd['fechaRegistro'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['fechaVigencia'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['nroSucursal'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['nroPuntoVenta'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['codigoCufd'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['codigoControl'] ?? '-'; ?></td>
-                                                <td><?php echo $cufd['estado'] ?? '-'; ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted p-3">
-                                                <i class="fa fa-info-circle"></i> No hay registros CUFD.
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CUIS -->
-            <div class="tab-pane fade" id="codigosCuis">
-                <div class="row mt-3">
-                    <div class="col-md-8">
-                        <h4><i class="fa fa-qrcode text-primary"></i> Listado CUIS</h4>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <a href="<?php echo site_url('billing/obtener_cuis'); ?>" class="btn btn-warning btn-lg" title="Sincronizar CUIS">
-                            <span class="ion-loop"></span> Sincronizar
-                        </a>
-                    </div>
-                </div>
-                <br>
-
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <strong><i class="fa fa-list"></i> Resultados CUIS</strong>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th>#</th>                                 
-                                        <th>Fecha Registro</th>
-                                        <th>Fecha Vigencia</th>
-                                        <th>Sucursal</th>
-                                        <th>Punto Venta</th>
-                                        <th>Codigo CUIS</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($cuis)): ?>
-                                        <?php $j = 1; foreach ($cuis as $cuis_item): ?>
-                                            <tr>
-                                                <td><?php echo $j++; ?></td>
-                                                <td><?php echo $cuis_item['fechaRegistro'] ?? '-'; ?></td>
-                                                <td><?php echo $cuis_item['fechaVigencia'] ?? '-'; ?></td>
-                                                <td><?php echo $cuis_item['nroSucursal'] ?? '-'; ?></td>
-                                                <td><?php echo $cuis_item['nroPuntoVenta'] ?? '-'; ?></td>
-                                                <td><?php echo $cuis_item['codigoCuis'] ?? '-'; ?></td>
-                                                <td><?php echo $cuis_item['estado'] ?? '-'; ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted p-3">
-                                                <i class="fa fa-info-circle"></i> No hay registros CUIS.
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <!-- CUFD -->
+        <div id="codigosCufd" class="tab-pane fade show active">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Listado de CUFD</h5>
+            <a href="<?= site_url('billing/sincronizar_cufd') ?>" class="btn btn-warning btn-sm">
+              <i class="ion-loop"></i> Obtener nuevo CUFD
+            </a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="thead-dark">
+                <tr>
+                  <th>#</th>
+                  <th>Registro</th>
+                  <th>Vigencia</th>
+                  <th>Sucursal</th>
+                  <th>Pto. Venta</th>
+                  <th>CUFD</th>
+                  <th>Código Control</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (!empty($cufds)): ?>
+                  <?php $i = 1; foreach ($cufds as $c): ?>
+                    <tr>
+                      <td><?= $i++ ?></td>
+                      <td><?= $c['fecha_registro'] ?></td>
+                      <td><?= $c['fecha_vigencia'] ?></td>
+                      <td><?= $c['nro_sucursal'] ?></td>
+                      <td><?= $c['nro_punto_venta'] ?></td>
+                      <td><?= $c['codigo_cufd'] ?></td>
+                      <td><?= $c['codigo_control'] ?></td>
+                      <td>
+                        <?php
+                          $vigente = strtotime($c['fecha_vigencia']) > time();
+                          echo $vigente
+                            ? '<span class="badge badge-success">Vigente</span>'
+                            : '<span class="badge badge-danger">Expirado</span>';
+                        ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                <?php else: ?>
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-3">
+                      <i class="fa fa-info-circle"></i> No hay registros de CUFD.
+                    </td>
+                  </tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
         </div>
-    </div>
-</div>
 
+        <!-- CUIS -->
+        <div id="codigosCuis" class="tab-pane fade">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Listado de CUIS</h5>
+            <a href="<?= site_url('billing/sincronizar_cuis') ?>" class="btn btn-warning btn-sm">
+              <i class="ion-loop"></i> Obtener nuevo CUIS
+            </a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="thead-dark">
+                <tr>
+                  <th>#</th>
+                  <th>Registro</th>
+                  <th>Vigencia</th>
+                  <th>Sucursal</th>
+                  <th>Pto. Venta</th>
+                  <th>Código CUIS</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (!empty($cuis)): ?>
+                  <?php $j = 1; foreach ($cuis as $u): ?>
+                    <tr>
+                      <td><?= $j++ ?></td>
+                      <td><?= $u['fechaRegistro'] ?? '-' ?></td>
+                      <td><?= $u['fechaVigencia'] ?? '-' ?></td>
+                      <td><?= $u['nroSucursal'] ?? '-' ?></td>
+                      <td><?= $u['nroPuntoVenta'] ?? '-' ?></td>
+                      <td><?= $u['codigoCuis'] ?? '-' ?></td>
+                      <td>
+                        <?php
+                          $v = !empty($u['fechaVigencia']) && strtotime($u['fechaVigencia']) > time();
+                          echo $v
+                            ? '<span class="badge badge-success">Vigente</span>'
+                            : '<span class="badge badge-secondary">--</span>';
+                        ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                <?php else: ?>
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                      <i class="fa fa-info-circle"></i> No hay registros de CUIS.
+                    </td>
+                  </tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
 .config-nav .nav-link {
-    padding: 12px 15px;
-    margin-bottom: 5px;
-    background: #f8f9fa;
-    border-radius: 0;
-    font-weight: 500;
-    color: #333;
+  padding: 10px 15px;
+  margin-bottom: 5px;
+  background: #f8f9fa;
+  font-weight: 500;
+  color: #333;
 }
 .config-nav .nav-link.active {
-    background: #007bff;
-    color: #fff;
+  background: #007bff;
+  color: #fff;
 }
 </style>
 
-<script type="text/javascript">
-  $(function() {
-    $('.config-nav a').on('click', function (e) {
-      e.preventDefault();
-      $('.config-nav li').removeClass('active');
-      $(this).parent().addClass('active');
-      $('.tab-pane').removeClass('in active show');
-      $($(this).attr('href')).addClass('in active show');
-    });
+<script>
+  // Inicializa pestañas con Bootstrap
+  $('#codigos .nav-pills a').on('click', function (e) {
+    e.preventDefault();
+    $(this).tab('show');
   });
 </script>
 

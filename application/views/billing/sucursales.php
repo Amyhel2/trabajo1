@@ -3,10 +3,11 @@ $this->load->view("partial/header");
 $this->load->view("partial/header_facturacion");
 ?>
 
-<div class="container-fluid">
-  <h4 class="mb-0">
+<div class="container-fluid mt-4">
+  <h4 class="mb-3">
     <i class="fa fa-qrcode text-primary"></i> Sucursales - Puntos de Venta
   </h4>
+
   <div class="row">
     <!-- Menú lateral -->
     <div class="col-md-3">
@@ -15,7 +16,7 @@ $this->load->view("partial/header_facturacion");
           <a href="#sucursales" data-toggle="tab"><i class="fa fa-briefcase"></i> Sucursales</a>
         </li>
         <li role="presentation">
-          <a href="#puntosDeVenta" data-toggle="tab"><i class="fa fa-boxes"></i> Punto de Venta</a>
+          <a href="#puntosDeVenta" data-toggle="tab"><i class="fa fa-boxes"></i> Puntos de Venta</a>
         </li>
       </ul>
     </div>
@@ -28,16 +29,16 @@ $this->load->view("partial/header_facturacion");
         <div class="tab-pane fade in active" id="sucursales">
           <div class="row mt-3">
             <div class="col-md-8">
-              <h4><i class="fa fa-qrcode text-primary"></i> Listado de Sucursales</h4>
+              <h4><i class="fa fa-briefcase text-primary"></i> Listado de Sucursales</h4>
             </div>
-            <div class="col-md-4" style="text-align: right;">
-              <a href="<?= site_url('billing/nuevaSucursal'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
+            <div class="col-md-4 text-right">
+              <a href="<?= site_url('billing/nuevaSucursal'); ?>" class="btn btn-success btn-lg">
                 <span class="ion-plus"></span> Nuevo
               </a>
             </div>
           </div>
           <br>
-          <div class="card shadow-sm">
+          <div class="card mt-3 shadow-sm">
             <div class="card-header bg-primary text-white">
               <strong><i class="fa fa-list"></i> Resultados</strong>
             </div>
@@ -57,26 +58,25 @@ $this->load->view("partial/header_facturacion");
                   </thead>
                   <tbody>
                     <?php if (!empty($sucursales)) : ?>
-                      <?php $i = 1; foreach ($sucursales as $sucursal) : ?>
+                      <?php $i = 1;
+                      foreach ($sucursales as $s) : ?>
                         <tr>
                           <td><?= $i++; ?></td>
-                          <td><?= htmlspecialchars($sucursal->nombre) ?></td>
-                          <td><?= htmlspecialchars($sucursal->responsable) ?></td>
-                          <td><?= htmlspecialchars($sucursal->telefono) ?></td>
-                          <td><?= htmlspecialchars($sucursal->celular) ?></td>
-                          <td><?= htmlspecialchars($sucursal->direccion) ?></td>
+                          <td><?= htmlspecialchars($s->nombre) ?></td>
+                          <td><?= htmlspecialchars($s->responsable) ?></td>
+                          <td><?= htmlspecialchars($s->telefono) ?></td>
+                          <td><?= htmlspecialchars($s->celular) ?></td>
+                          <td><?= htmlspecialchars($s->direccion) ?></td>
                           <td>
-                            <a href="<?= site_url('billing/editarSucursal/' . $sucursal->id) ?>"
-                               class="btn btn-info btn-lg hidden-sm hidden-xs"
-                               title="Editar sucursal">
-                              <span class="ion-edit">Editar</span>
+                            <a href="<?= site_url('billing/editarSucursal/' . $s->id) ?>" class="btn btn-info btn-sm" title="Editar">
+                              <span class="ion-edit"></span>
                             </a>
                           </td>
                         </tr>
                       <?php endforeach; ?>
                     <?php else : ?>
                       <tr>
-                        <td colspan="7" class="text-center text-muted p-3">
+                        <td colspan="7" class="text-center text-muted py-3">
                           <i class="fa fa-info-circle"></i> No hay sucursales a mostrar.
                         </td>
                       </tr>
@@ -92,19 +92,19 @@ $this->load->view("partial/header_facturacion");
         <div class="tab-pane fade" id="puntosDeVenta">
           <div class="row mt-3">
             <div class="col-md-8">
-              <h4><i class="fa fa-qrcode text-primary"></i> Listado Puntos de Venta</h4>
+              <h4><i class="fa fa-boxes text-primary"></i> Listado de Puntos de Venta</h4>
             </div>
             <div class="col-md-4 text-right">
-              <a href="<?= site_url('billing/crearPuntoVenta'); ?>" class="btn btn-success btn-lg hidden-sm hidden-xs">
+              <a href="<?= site_url('billing/crearPuntoVenta'); ?>" class="btn btn-success btn-lg">
                 <span class="ion-plus"></span> Nuevo
               </a>
-              <a href="<?= site_url('billing/sincronizar_puntos'); ?>" class="btn btn-warning btn-lg hidden-sm hidden-xs" title="Sincronizar">
+              <a href="<?= site_url('billing/sincronizar_puntos'); ?>#puntosDeVenta" class="btn btn-warning btn-lg" title="Sincronizar">
                 <span class="ion-loop"></span> Sincronizar
               </a>
             </div>
           </div>
           <br>
-          <div class="card shadow-sm">
+          <div class="card mt-3 shadow-sm">
             <div class="card-header bg-primary text-white">
               <strong><i class="fa fa-list"></i> Resultados</strong>
             </div>
@@ -114,16 +114,17 @@ $this->load->view("partial/header_facturacion");
                   <thead class="thead-dark">
                     <tr>
                       <th>#</th>
-                      <th>N° Sucursal</th>
-                      <th>N° Punto de Venta</th>
+                      <th>Sucursal ID</th>
+                      <th>Pto. Venta</th>
                       <th>Nombre PV</th>
                       <th>Tipo PV</th>
                       <th>Emisión</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <?php if (!empty($puntos)) : ?>
-                      <?php $j = 1; foreach ($puntos as $pv) : ?>
+                    <?php if (!empty($puntosVenta)) : ?>
+                      <?php $j = 1;
+                      foreach ($puntosVenta as $pv) : ?>
                         <tr>
                           <td><?= $j++; ?></td>
                           <td><?= htmlspecialchars($pv->id_sucursal) ?></td>
@@ -135,7 +136,7 @@ $this->load->view("partial/header_facturacion");
                       <?php endforeach; ?>
                     <?php else : ?>
                       <tr>
-                        <td colspan="6" class="text-center text-muted p-3">
+                        <td colspan="6" class="text-center text-muted py-3">
                           <i class="fa fa-info-circle"></i> No hay puntos de venta a mostrar.
                         </td>
                       </tr>
@@ -153,24 +154,36 @@ $this->load->view("partial/header_facturacion");
 </div>
 
 <style>
-  .config-nav .nav-link {
+  .config-nav .nav-link,
+  .config-nav li a {
+    display: block;
     padding: 12px 15px;
     margin-bottom: 5px;
     background: #f8f9fa;
-    border-radius: 0;
-    font-weight: 500;
     color: #333;
+    font-weight: 500;
+    text-decoration: none;
   }
 
+  .config-nav li.active a,
   .config-nav .nav-link.active {
-    background: #007bff;
+    background: rgb(62, 133, 209);
     color: #fff;
   }
 </style>
 
 <script type="text/javascript">
-  $("#employee_id").select2();
-  date_time_picker_field($("#expire_date"), JS_DATE_FORMAT);
+  $(function() {
+    $('.config-nav a').on('click', function(e) {
+      e.preventDefault();
+      $('.config-nav li').removeClass('active');
+      $(this).parent().addClass('active');
+      $('.tab-pane').removeClass('in active show');
+      $($(this).attr('href')).addClass('in active show');
+    });
+  });
 </script>
 
 <?php $this->load->view("partial/footer"); ?>
+
+

@@ -2,61 +2,59 @@
 <?php $this->load->view("partial/header_facturacion"); ?>
 
 <div class="container-fluid mt-4">
-  <!-- Título principal -->
   <div class="row mb-3">
     <div class="col-md-8">
-      <h4>
-        <i class="fa fa-file-invoice text-primary"></i> Nuevo Punto de Venta
-      </h4>
+      <h4><i class="fa fa-boxes text-primary"></i> Nuevo Punto de Venta</h4>
     </div>
     <div class="col-md-4 text-right">
-      <a href="<?php echo site_url('billing/sucursales'); ?>" class="btn btn-info">
-        <i class="ion-arrow-return-left"></i> Volver a Sucursales
+      <a href="<?= site_url('billing/sucursales#puntosDeVenta'); ?>" class="btn btn-info btn-sm">
+        <i class="ion-arrow-return-left"></i> Volver
       </a>
     </div>
   </div>
-
   <div class="card shadow-sm">
     <div class="card-body">
-      <form method="post" action="<?php echo site_url('billing/crearEvento'); ?>">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="punto_de_venta">Sucursal:</label>
-            <select class="form-control" name="punto_de_venta" id="punto_de_venta" required>
-              <option value="">-- Seleccionar --</option>
-              <?php foreach ($pos as $p): ?>
-                <option value="<?= $p['nroPuntoVenta'] ?>">
-                  <?= $p['nombrePuntoVenta'] ?> (Sucursal <?= $p['nroSucursal'] ?>)
-                </option>
-              <?php endforeach; ?>
-            </select>
+      <form method="post" action="<?= site_url('billing/guardarPuntoVenta'); ?>">
+        <?php if ($msg = $this->session->flashdata('success')): ?>
+          <div class="alert alert-success">
+            <i class="fa fa-check-circle"></i> <?= $msg; ?>
           </div>
-
-          <div class="col-md-6 mb-3">
-            <label for="tipo_evento">Tipo de Punto de Venta:</label>
-            <select class="form-control" name="tipo_evento" id="tipo_evento" required>
-              <option value="">-- Seleccionar --</option>
-              <option value="1">Evento Significativo CAF-C</option>
-              <option value="2">Otro Evento Significativo</option>
-            </select>
+        <?php endif; ?>
+        <?php if ($msg = $this->session->flashdata('error')): ?>
+          <div class="alert alert-danger">
+            <i class="fa fa-exclamation-circle"></i> <?= $msg; ?>
           </div>
-          
+        <?php endif; ?>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="nroSucursal">Código Sucursal</label>
+            <input type="text" name="nroSucursal" id="nroSucursal" class="form-control" required>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="nroPuntoVenta">Nro. Punto de Venta</label>
+            <input type="text" name="nroPuntoVenta" id="nroPuntoVenta" class="form-control" required>
+          </div>
         </div>
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="tipo_evento">Nombre de Punto de Venta:</label>
-            <select class="form-control" name="tipo_evento" id="tipo_evento" required>
-              <option value="">-- Seleccionar --</option>
-              <option value="1">Evento Significativo CAF-C</option>
-              <option value="2">Otro Evento Significativo</option>
-            </select>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="nombre">Nombre Punto</label>
+            <input type="text" name="nombre" id="nombre" class="form-control" required>
           </div>
+          <div class="form-group col-md-3">
+            <label for="tipo_punto_venta">Tipo PV</label>
+            <input type="text" name="tipo_punto_venta" id="tipo_punto_venta" class="form-control" required>
           </div>
-        <br>
-        <div class="row">
-          <div class="col-md-12 text-right">
+          <div class="form-group col-md-3">
+            <label for="tipo_emision">Emisión</label>
+            <input type="text" name="tipo_emision" id="tipo_emision" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="col text-right">
             <button type="submit" class="btn btn-success">
-              <i class="ion-plus"></i> Crear
+              <i class="ion-plus"></i> Crear Punto
             </button>
           </div>
         </div>

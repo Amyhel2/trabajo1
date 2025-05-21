@@ -23,7 +23,7 @@ class Billing extends Secure_area
     public function __construct()
     {
         parent::__construct();
-        $this->load->helper(['form','url']);
+        $this->load->helper(['form', 'url']);
         $this->load->library('session');
         $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
 
@@ -31,7 +31,7 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-  
+
 
     // 1. Listado de facturas
     public function index()
@@ -93,7 +93,10 @@ class Billing extends Secure_area
         // mejor: traer por idfac, pero la API no filtra por idfac en listarFacturas
         $factura = null;
         foreach ($detalle['facturas'] ?? [] as $f) {
-            if ($f['id'] == $idfac) { $factura = $f; break; }
+            if ($f['id'] == $idfac) {
+                $factura = $f;
+                break;
+            }
         }
         if (!$factura || empty($factura['cuf'])) {
             $this->session->set_flashdata('error', 'No se encontró CUF para la factura');
@@ -123,7 +126,10 @@ class Billing extends Secure_area
         ]);
         $factura = null;
         foreach ($resp['facturas'] ?? [] as $f) {
-            if ($f['id'] == $idfac) { $factura = $f; break; }
+            if ($f['id'] == $idfac) {
+                $factura = $f;
+                break;
+            }
         }
 
         if (!$factura || empty($factura['email'])) {
@@ -163,7 +169,7 @@ class Billing extends Secure_area
         }
         redirect('billing/index');
     }
-   ////
+    ////
     // FACTURAR
     public function facturar($sale_id = null)
     {
@@ -229,24 +235,71 @@ class Billing extends Secure_area
     ////
 
     // CODIGOS
-    public function codigos()
-    {
-        $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
-        $this->load->view('billing/codigos', [
-            'cufds' => $resp['cufds']['data'] ?? [],
-            'cuis' => $resp['cuiss']['data'] ?? []
-        ]);
+   public function codigos()
+{
+    // CUFD BD local
+    $cufdsLocal = $this->Cufd_model->obtener_todos();
+
+    // Si no hay nada en BD, leer directo de API
+    if (empty($cufdsLocal)) {
+        $resp = $this->call_api(['funcion'=>'listarCodigos','ids'=>'1']);
+        $cufdsLocal = $resp['cufds']['data'] ?? [];
     }
+
+    // CUIS API
+    $resp2 = $this->call_api(['funcion'=>'listarCodigos','ids'=>'1']);
+    $cuis = $resp2['cuiss']['data'] ?? [];
+
+    $this->load->view('billing/codigos', [
+        'cufds' => $cufdsLocal,
+        'cuis'  => $cuis
+    ]);
+}
+
+    /**
+     * Sincroniza un nuevo CUFD: llama API, luego guarda en BD local
+     */
     public function sincronizar_cufd()
     {
+        // 1) Generar CUFD en API
         $this->call_api(['funcion' => 'sincronizarCufd', 'ids' => '1']);
+
+        // 2) Recuperar todos los códigos (incluyendo el nuevo)
+        $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+        $cufdsApi = $resp['cufds']['data'] ?? [];
+
+        // 3) Guardar cada uno en BD local
+        foreach ($cufdsApi as $cufd) {
+            $this->Cufd_model->guardar([
+                'codigo_cufd'     => $cufd['codigoCufd'],
+                'codigo_control'  => $cufd['codigoControl'],
+                'fecha_registro'  => $cufd['fechaRegistro'],
+                'fecha_vigencia'  => $cufd['fechaVigencia'],
+                'nro_sucursal'    => $cufd['nroSucursal'],
+                'nro_punto_venta' => $cufd['nroPuntoVenta'],
+                'estado'          => $cufd['estado']
+            ]);
+        }
+
+        // 4) Feedback y redirección
+        $this->session->set_flashdata('success', 'CUFD sincronizado correctamente.');
         redirect('billing/codigos');
     }
+
+    /**
+     * Sincroniza un nuevo CUIS (puede renombrarse luego)
+     */
     public function sincronizar_cuis()
     {
-        $this->call_api(['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1']);
+        $resp = $this->call_api(['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1']);
+        $ok = !empty($resp['ok']);
+        $this->session->set_flashdata(
+            $ok ? 'success' : 'error',
+            $ok ? 'CUIS sincronizado correctamente.' : 'Error al sincronizar CUIS.'
+        );
         redirect('billing/codigos');
     }
+
     ////
 
     // CONFIGURACION
@@ -265,119 +318,222 @@ class Billing extends Secure_area
     ////
 
     // SUCURSALES
-  
 
-public function sucursales()
-{
-    // Cargar modelos
-    $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
+    public function sucursales()
+    {
+        // 1. Listar Sucursales desde la API
+        $respSuc      = $this->call_api(['funcion' => 'listarSucursales']);
+        $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
+        foreach ($sucursalesApi as $s) {
+            $this->Sucursal_model->guardar_o_actualizar([
+                'codigo_sucursal' => $s['codigoSucursal'],
+                'nombre'          => $s['nombreSucursal'],
+                'direccion'       => $s['direccionSucursal'],
+                'responsable'     => $s['responsableSucursal'],
+                'telefono'        => $s['telefonoSucursal'],
+                'celular'         => $s['celularSucursal'],
+            ]);
+        }
 
-    // =========================
-    // 1. Listar Sucursales API
-    // =========================
-    $respSuc = $this->call_api(['funcion' => 'listarSucursales']);
-    $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
+        // 2. Listar Puntos de Venta (POS) desde la API — clave 'pos'
+        $respPdv = $this->call_api(['funcion' => 'listarPos']);
+        $posApi  = $respPdv['pos']['data'] ?? [];
+        foreach ($posApi as $pv) {
+            // Buscar el ID interno de la sucursal por su código
+            $s = $this->db
+                ->where('codigo_sucursal', $pv['nroSucursal'])
+                ->get('sucursales_siat')
+                ->row();
 
-    foreach ($sucursalesApi as $s) {
-        $this->Sucursal_model->guardar_o_actualizar([
-            'codigo_sucursal' => $s['codigoSucursal'],
-            'nombre'          => $s['nombreSucursal'],
-            'direccion'       => $s['direccionSucursal'],
-            'responsable'     => $s['responsableSucursal'],
-            'telefono'        => $s['telefonoSucursal'],
-            'celular'         => $s['celularSucursal'],
+            $this->PuntoVenta_model->guardar_o_actualizar([
+                'id_sucursal'      => $s->id ?? null,
+                'nro_punto_venta'  => $pv['nroPuntoVenta'],
+                'nombre'           => $pv['nombrePuntoVenta'],
+                'tipo_punto_venta' => $pv['tipoPuntoVenta'],
+                'tipo_emision'     => $pv['tipoEmision'],
+                // opcional: 'estado' => $pv['estado'], 'api_id' => $pv['id']
+            ]);
+        }
+
+        // 3. Obtener datos ya guardados en la base local
+        $sucursales  = $this->Sucursal_model->obtener_todas();
+        $puntosVenta = $this->PuntoVenta_model->obtener_todos();
+
+        // 4. Cargar la vista con las variables que ésta espera
+        $this->load->view('billing/sucursales', [
+            'sucursales'  => $sucursales,
+            'puntosVenta' => $puntosVenta
         ]);
     }
-
-    // ===============================
-    // 2. Listar Puntos de Venta API
-    // ===============================
-    $respPdv = $this->call_api(['funcion' => 'listarPos']);
-    $puntosApi = $respPdv['dat'] ?? ['data'];
-
-    foreach ($puntosApi as $pv) {
-        $this->PuntoVenta_model->guardar_o_actualizar([
-            'id_sucursal'      => $pv['nroSucursal'],
-            'nro_punto_venta'  => $pv['nroPuntoVenta'],
-            'nombre'           => $pv['nombrePuntoVenta'],
-            'tipo_punto_venta' => $pv['tipoPuntoVenta'],
-            'tipo_emision'     => $pv['tipoEmision'],
-        ]);
-    }
-
-    // ==========================
-    // 3. Leer desde BD local
-    // ==========================
-    $sucursales = $this->Sucursal_model->obtener_todas();
-    $puntos     = $this->PuntoVenta_model->obtener_todos();
-
-    // ==========================
-    // 4. Mostrar vista
-    // ==========================
-    $this->load->view('billing/sucursales', [
-        'sucursales' => $sucursales,
-        'puntos'     => $puntos
-    ]);
-}
-
-
-
     public function sincronizar_sucursales()
     {
         $this->call_api(['funcion' => 'listarSucursales']);
         redirect('billing/sucursales');
     }
+
     public function sincronizar_puntos()
-{
-    $this->load->model('PuntoVenta_model');
-    $resp = $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
-    $datos_api = $resp['puntos']['data'] ?? [];
+    {
+        $this->load->model('PuntoVenta_model');
 
-    foreach ($datos_api as $p) {
-        // Buscar id_sucursal localmente por el código
-        $sucursal = $this->db
-            ->where('codigo_sucursal', $p['nroSucursal'])
-            ->get('sucursales_siat')
-            ->row();
+        // 1. Ejecutar sincronización en la API
+        $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
 
-        if ($sucursal) {
-            $this->PuntoVenta_model->guardar_o_actualizar([
-                'id_sucursal'      => $sucursal->id,
-                'nro_punto_venta'  => $p['nroPuntoVenta'],
-                'nombre'           => $p['nombrePuntoVenta'],
-                'tipo_punto_venta' => $p['tipoPuntoVenta'],
-                'tipo_emision'     => $p['tipoEmision']
-            ]);
+        // 2. Ahora sí obtener los datos sincronizados
+        $resp = $this->call_api(['funcion' => 'listarPos']);
+        $datos_api = $resp['pos']['data'] ?? [];
+
+        foreach ($datos_api as $p) {
+            $sucursal = $this->db
+                ->where('codigo_sucursal', $p['nroSucursal'])
+                ->get('sucursales_siat')
+                ->row();
+
+            if ($sucursal) {
+                $this->PuntoVenta_model->guardar_o_actualizar([
+                    'id_sucursal'      => $sucursal->id,
+                    'nro_punto_venta'  => $p['nroPuntoVenta'],
+                    'nombre'           => $p['nombrePuntoVenta'],
+                    'tipo_punto_venta' => $p['tipoPuntoVenta'],
+                    'tipo_emision'     => $p['tipoEmision']
+                ]);
+            }
         }
+
+        redirect('billing/sucursales#puntosDeVenta');
     }
 
-    redirect('billing/sucursales#puntosDeVenta');
-}
 
     public function nuevaSucursal()
     {
         $this->load->view('billing/crearSucursal');
     }
+
     public function crearSucursal()
     {
-        $pl = ['funcion' => 'newSucursal', 'sucursal' => $this->input->post('sucursal'), 'direccion' => $this->input->post('direccion'), 'responsable' => $this->input->post('responsable'), 'telefono' => $this->input->post('telefono'), 'celular' => $this->input->post('celular')];
-        if ($n = $this->input->post('nroSucursal')) $pl['nroSucursal'] = $n;
-        if ($c = $this->input->post('codigoSucursal')) $pl['codigoSucursal'] = $c;
-        $resp = $this->call_api($pl);
-        $ok = !empty($resp['ok']);
-        $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Sucursal creada' : 'Error creando sucursal');
-        redirect('billing/sucursales#sucursales');
+        // 1) Armo el payload para la API
+        $payload = [
+            'funcion'        => 'newSucursal',
+            'nroSucursal'    => $this->input->post('nroSucursal'),
+            'codigoSucursal' => $this->input->post('codigoSucursal'),
+            'sucursal'       => $this->input->post('sucursal'),
+            'direccion'      => $this->input->post('direccion'),
+            'responsable'    => $this->input->post('responsable'),
+            'telefono'       => $this->input->post('telefono'),
+            'celular'        => $this->input->post('celular'),
+        ];
+
+        // 2) Llamo a la API
+        $resp = $this->call_api($payload);
+
+        // 3) Si la API confirma OK, guardo también localmente
+        if (!empty($resp['ok'])) {
+            $this->Sucursal_model->guardar_o_actualizar([
+                'codigo_sucursal' => $payload['codigoSucursal'],
+                'nombre'          => $payload['sucursal'],
+                'direccion'       => $payload['direccion'],
+                'responsable'     => $payload['responsable'],
+                'telefono'        => $payload['telefono'],
+                'celular'         => $payload['celular'],
+            ]);
+            $this->session->set_flashdata('success', 'Sucursal creada correctamente.');
+        } else {
+            $this->session->set_flashdata('error', 'Error al crear la sucursal.');
+        }
+
+        redirect('billing/sucursales');
     }
-    public function editarSucursal()
+
+    public function editarSucursal($id)
     {
-        $this->load->view('billing/editarSucursal');
+        $resp = $this->call_api([
+            'funcion'    => 'editSucursal',
+            'idsucursal' => $id
+        ]);
+
+        if (!isset($resp['sucursal'])) {
+            $this->session->set_flashdata('error', 'No se pudo obtener la sucursal');
+            redirect('billing/sucursales');
+        }
+
+        $data['sucursal'] = (object)[
+            'id'        => $resp['sucursal']['id'],
+            'nroSucursal' => $resp['sucursal']['nroSucursal'],
+            'codigoSucursal' => $resp['sucursal']['codigoSucursal'],
+            'nombre'    => $resp['sucursal']['nombreSucursal'],
+            'direccion' => $resp['sucursal']['direccionSucursal'],
+            'responsable' => $resp['sucursal']['responsableSucursal'],
+            'telefono'  => $resp['sucursal']['telefonoSucursal'],
+            'celular'   => $resp['sucursal']['celularSucursal']
+        ];
+
+        $this->load->view('billing/editarSucursal', $data);
     }
+
+    public function actualizarSucursal()
+    {
+        $payload = [
+            'funcion'     => 'updSucursal',
+            'idsucursal'  => $this->input->post('id'),
+            'sucursal'    => $this->input->post('sucursal'),
+            'direccion'   => $this->input->post('direccion'),
+            'responsable' => $this->input->post('responsable'),
+            'telefono'    => $this->input->post('telefono'),
+            'celular'     => $this->input->post('celular')
+        ];
+
+        $resp = $this->call_api($payload);
+
+        if (!empty($resp['ok'])) {
+            $this->session->set_flashdata('success', 'Sucursal actualizada correctamente.');
+        } else {
+            $this->session->set_flashdata('error', 'Error al actualizar la sucursal.');
+        }
+
+        redirect('billing/sucursales');
+    }
+
+
+    //Punto de Venta
     public function crearPuntoVenta()
     {
         $this->load->view('billing/crearPuntoVenta');
     }
 
-    // Sincronización general
+    public function guardarPuntoVenta()
+    {
+        $payload = [
+            'funcion'         => 'newPos',               // revisa en la doc si es 'newPos'
+            'nroSucursal'     => $this->input->post('nroSucursal'),
+            'nroPuntoVenta'   => $this->input->post('nroPuntoVenta'),
+            'nombrePuntoVenta' => $this->input->post('nombre'),
+            'tipoPuntoVenta'  => $this->input->post('tipo_punto_venta'),
+            'tipoEmision'     => $this->input->post('tipo_emision'),
+        ];
+
+        $resp = $this->call_api($payload);
+
+        if (!empty($resp['ok'])) {
+            // convierto nroSucursal → id_sucursal interno
+            $s = $this->db->where('codigo_sucursal', $payload['nroSucursal'])
+                ->get('sucursales_siat')
+                ->row();
+            $this->PuntoVenta_model->guardar_o_actualizar([
+                'id_sucursal'      => $s->id ?? null,
+                'nro_punto_venta'  => $payload['nroPuntoVenta'],
+                'nombre'           => $payload['nombrePuntoVenta'],
+                'tipo_punto_venta' => $payload['tipoPuntoVenta'],
+                'tipo_emision'     => $payload['tipoEmision'],
+            ]);
+            $this->session->set_flashdata('success', 'Punto de Venta creado correctamente.');
+        } else {
+            $this->session->set_flashdata('error', 'Error al crear el Punto de Venta.');
+        }
+
+        redirect('billing/sucursales#puntosDeVenta');
+    }
+    ////
+
+    // SINCRONIZACION
     public function sincronizacion()
     {
         $this->load->view('billing/sincronizacion');
@@ -390,7 +546,7 @@ public function sucursales()
         redirect('billing/index');
     }
     ////
-    
+
     // EVENTOS
     public function eventos()
     {
@@ -410,7 +566,7 @@ public function sucursales()
         $this->session->set_flashdata($ok ? 'success' : 'error', $ok ? 'Evento creado' : 'Error creando evento');
         redirect('billing/eventos');
     }
-    
+
 
     // HELPER: Llama a la API con timeout y logging
     private function call_api(array $params)
@@ -437,4 +593,9 @@ public function sucursales()
         return $json ?: ['error' => 'Respuesta inválida del servidor'];
     }
     ////
+
+    public function sincroizacion()
+    {
+        $this->load->view('billing/sincronizarGeneral');
+    }
 }
