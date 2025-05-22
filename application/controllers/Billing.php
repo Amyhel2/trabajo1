@@ -10,8 +10,6 @@ require_once APPPATH . "traits/emailSalesReceiptTrait.php";
 require_once APPPATH . "libraries/Fatoora.php";
 require_once(APPPATH . "traits/saleTrait.php");
 
-
-
 class Billing extends Secure_area
 {
     use taxOverrideTrait,
@@ -26,14 +24,10 @@ class Billing extends Secure_area
         $this->load->helper(['form', 'url']);
         $this->load->library('session');
         $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
-
-        // Carga tu librería de cURL si la tienes, sino usa directamente curl_exec
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-
-
-    // 1. Listado de facturas
+    // Listado de facturas
     public function index()
     {
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
@@ -64,7 +58,7 @@ class Billing extends Secure_area
         ]);
     }
 
-    // 2. Ver / Descargar PDF
+    // Ver / Descargar PDF
     public function ver_pdf($idfac = null)
     {
         if (!$idfac) {
@@ -72,7 +66,7 @@ class Billing extends Secure_area
             redirect('billing/index');
         }
 
-        // Generar el PDF en el servidor de la API
+
         $pdfOk = $this->call_api([
             'funcion' => 'generarFacturaPdf',
             'idfac'   => $idfac
@@ -83,14 +77,14 @@ class Billing extends Secure_area
             redirect('billing/index');
         }
 
-        // Obtener el CUF para localizar el archivo
+
         $detalle = $this->call_api([
             'funcion' => 'listarFacturas',
             'ids'     => '1',
             'fechainicio' => date('Y-m-d'),
             'fechafin'    => date('Y-m-d')
         ]);
-        // mejor: traer por idfac, pero la API no filtra por idfac en listarFacturas
+
         $factura = null;
         foreach ($detalle['facturas'] ?? [] as $f) {
             if ($f['id'] == $idfac) {
@@ -114,10 +108,9 @@ class Billing extends Secure_area
         exit;
     }
 
-    // 3. Enviar por email
     public function enviar_email($idfac)
     {
-        // Obtener datos de factura
+
         $resp = $this->call_api([
             'funcion' => 'listarFacturas',
             'ids'     => '1',
@@ -153,7 +146,7 @@ class Billing extends Secure_area
         redirect('billing/index');
     }
 
-    // 4. Anular factura
+    // Anular Factura
     public function anular_factura($idfac)
     {
         $res = $this->call_api([
@@ -170,14 +163,13 @@ class Billing extends Secure_area
         redirect('billing/index');
     }
     ////
+
     // FACTURAR
     public function facturar($sale_id = null)
     {
         $this->load->model(['Item', 'Sale']);
 
         $productos = $this->Item->get_all();
-
-        // Variables por defecto para facturación manual
         $razon_social = '';
         $nit = '';
         $email = '';
@@ -186,7 +178,6 @@ class Billing extends Secure_area
         $descuento_total = 0.00;
         $total = 0.00;
 
-        // Si viene un sale_id, entonces cargamos los datos automáticamente
         if ($sale_id) {
             $venta = $this->Sale->get_detalle_venta_completo($sale_id);
             if (empty($venta)) {
@@ -219,7 +210,6 @@ class Billing extends Secure_area
             }
         }
 
-        // Carga la vista con valores manuales o precargados
         $this->load->view('billing/facturar', [
             'razon_social' => $razon_social,
             'nit' => $nit,
@@ -232,43 +222,57 @@ class Billing extends Secure_area
         ]);
     }
 
+    public function procesar_factura()
+    {
+        $maestro = $this->input->post('maestro');
+        $detalle = $this->input->post('detalle');
+
+        $payload = [
+            'funcion' => 'procesarFactura',
+            'maestro' => $maestro,
+            'detalle' => $detalle
+        ];
+
+        $resp = $this->call_api($payload);
+
+        if (!empty($resp['ok'])) {
+            $this->session->set_flashdata('success', 'Factura emitida correctamente');
+        } else {
+            $this->session->set_flashdata('error', $resp['error'] ?? 'Error al emitir factura');
+        }
+
+        redirect('billing/index');
+    }
     ////
 
     // CODIGOS
-   public function codigos()
-{
-    // CUFD BD local
-    $cufdsLocal = $this->Cufd_model->obtener_todos();
+    public function codigos()
+    {
+        $cufdsLocal = $this->Cufd_model->obtener_todos();
+        if (empty($cufdsLocal)) {
+            $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+            $cufdsLocal = $resp['cufds']['data'] ?? [];
+        }
 
-    // Si no hay nada en BD, leer directo de API
-    if (empty($cufdsLocal)) {
-        $resp = $this->call_api(['funcion'=>'listarCodigos','ids'=>'1']);
-        $cufdsLocal = $resp['cufds']['data'] ?? [];
+        //ACA SE ESTA LLAMANDO A LA FUNCION DE LA API
+        $resp2 = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+        $cuis = $resp2['cuiss']['data'] ?? [];
+
+        $this->load->view('billing/codigos', [
+            'cufds' => $cufdsLocal,
+            'cuis'  => $cuis
+        ]);
     }
 
-    // CUIS API
-    $resp2 = $this->call_api(['funcion'=>'listarCodigos','ids'=>'1']);
-    $cuis = $resp2['cuiss']['data'] ?? [];
-
-    $this->load->view('billing/codigos', [
-        'cufds' => $cufdsLocal,
-        'cuis'  => $cuis
-    ]);
-}
-
-    /**
-     * Sincroniza un nuevo CUFD: llama API, luego guarda en BD local
-     */
     public function sincronizar_cufd()
     {
-        // 1) Generar CUFD en API
+
         $this->call_api(['funcion' => 'sincronizarCufd', 'ids' => '1']);
 
-        // 2) Recuperar todos los códigos (incluyendo el nuevo)
+
         $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
         $cufdsApi = $resp['cufds']['data'] ?? [];
 
-        // 3) Guardar cada uno en BD local
         foreach ($cufdsApi as $cufd) {
             $this->Cufd_model->guardar([
                 'codigo_cufd'     => $cufd['codigoCufd'],
@@ -281,14 +285,10 @@ class Billing extends Secure_area
             ]);
         }
 
-        // 4) Feedback y redirección
         $this->session->set_flashdata('success', 'CUFD sincronizado correctamente.');
         redirect('billing/codigos');
     }
 
-    /**
-     * Sincroniza un nuevo CUIS (puede renombrarse luego)
-     */
     public function sincronizar_cuis()
     {
         $resp = $this->call_api(['funcion' => 'sincronizarSiat', 'valor' => 1, 'ids' => '1']);
@@ -299,7 +299,6 @@ class Billing extends Secure_area
         );
         redirect('billing/codigos');
     }
-
     ////
 
     // CONFIGURACION
@@ -318,10 +317,9 @@ class Billing extends Secure_area
     ////
 
     // SUCURSALES
-
     public function sucursales()
     {
-        // 1. Listar Sucursales desde la API
+
         $respSuc      = $this->call_api(['funcion' => 'listarSucursales']);
         $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
         foreach ($sucursalesApi as $s) {
@@ -335,11 +333,11 @@ class Billing extends Secure_area
             ]);
         }
 
-        // 2. Listar Puntos de Venta (POS) desde la API — clave 'pos'
+
         $respPdv = $this->call_api(['funcion' => 'listarPos']);
         $posApi  = $respPdv['pos']['data'] ?? [];
         foreach ($posApi as $pv) {
-            // Buscar el ID interno de la sucursal por su código
+
             $s = $this->db
                 ->where('codigo_sucursal', $pv['nroSucursal'])
                 ->get('sucursales_siat')
@@ -351,15 +349,15 @@ class Billing extends Secure_area
                 'nombre'           => $pv['nombrePuntoVenta'],
                 'tipo_punto_venta' => $pv['tipoPuntoVenta'],
                 'tipo_emision'     => $pv['tipoEmision'],
-                // opcional: 'estado' => $pv['estado'], 'api_id' => $pv['id']
+
             ]);
         }
 
-        // 3. Obtener datos ya guardados en la base local
+
         $sucursales  = $this->Sucursal_model->obtener_todas();
         $puntosVenta = $this->PuntoVenta_model->obtener_todos();
 
-        // 4. Cargar la vista con las variables que ésta espera
+
         $this->load->view('billing/sucursales', [
             'sucursales'  => $sucursales,
             'puntosVenta' => $puntosVenta
@@ -375,10 +373,10 @@ class Billing extends Secure_area
     {
         $this->load->model('PuntoVenta_model');
 
-        // 1. Ejecutar sincronización en la API
+
         $this->call_api(['funcion' => 'sincronizarPos', 'nroSucursal' => 0]);
 
-        // 2. Ahora sí obtener los datos sincronizados
+
         $resp = $this->call_api(['funcion' => 'listarPos']);
         $datos_api = $resp['pos']['data'] ?? [];
 
@@ -410,7 +408,7 @@ class Billing extends Secure_area
 
     public function crearSucursal()
     {
-        // 1) Armo el payload para la API
+
         $payload = [
             'funcion'        => 'newSucursal',
             'nroSucursal'    => $this->input->post('nroSucursal'),
@@ -422,10 +420,9 @@ class Billing extends Secure_area
             'celular'        => $this->input->post('celular'),
         ];
 
-        // 2) Llamo a la API
         $resp = $this->call_api($payload);
 
-        // 3) Si la API confirma OK, guardo también localmente
+
         if (!empty($resp['ok'])) {
             $this->Sucursal_model->guardar_o_actualizar([
                 'codigo_sucursal' => $payload['codigoSucursal'],
@@ -502,7 +499,7 @@ class Billing extends Secure_area
     public function guardarPuntoVenta()
     {
         $payload = [
-            'funcion'         => 'newPos',               // revisa en la doc si es 'newPos'
+            'funcion'         => 'newPos',              
             'nroSucursal'     => $this->input->post('nroSucursal'),
             'nroPuntoVenta'   => $this->input->post('nroPuntoVenta'),
             'nombrePuntoVenta' => $this->input->post('nombre'),
@@ -513,7 +510,7 @@ class Billing extends Secure_area
         $resp = $this->call_api($payload);
 
         if (!empty($resp['ok'])) {
-            // convierto nroSucursal → id_sucursal interno
+           
             $s = $this->db->where('codigo_sucursal', $payload['nroSucursal'])
                 ->get('sucursales_siat')
                 ->row();
@@ -567,8 +564,7 @@ class Billing extends Secure_area
         redirect('billing/eventos');
     }
 
-
-    // HELPER: Llama a la API con timeout y logging
+    //FUNCION DE LLAMADA PRINCIPAL A LA API
     private function call_api(array $params)
     {
         $ch = curl_init($this->api_url);
@@ -598,4 +594,41 @@ class Billing extends Secure_area
     {
         $this->load->view('billing/sincronizarGeneral');
     }
+
+    public function agregar() {
+    $data['nit'] = '';
+    $data['razon_social'] = '';
+    $data['email'] = '';
+    $this->load->view('billing/agregar', $data);
+  }
+
+  // Buscar por NIT o CI (botón o autocomplete)
+  public function buscar_por_nit() {
+    $nit = $this->input->get('nit');
+    $this->load->model('Customer');
+    $cliente = $this->Customer->obtener_por_nit($nit);
+    if ($cliente) {
+      echo json_encode(['success' => true, 'cliente' => $cliente]);
+    } else {
+      echo json_encode(['success' => false]);
+    }
+  }
+
+  // Buscar por razón social (botón o autocomplete)
+  public function buscar_por_razon_social() {
+    $nombre = $this->input->get('razon_social');
+    $this->load->model('Customer');
+    $cliente = $this->Customer->obtener_por_razon_social($nombre);
+    if ($cliente) {
+      echo json_encode(['success' => true, 'cliente' => $cliente]);
+    } else {
+      echo json_encode(['success' => false]);
+    }
+  }
+
+
+
+
 }
+
+

@@ -28,8 +28,6 @@ class Cufd_model extends CI_Model
     }
 
     /**
-     * Devuelve el CUFD vigente para la sucursal y punto de venta dados.
-     *
      * @param int $nro_sucursal
      * @param int $nro_pv
      * @return array|null
