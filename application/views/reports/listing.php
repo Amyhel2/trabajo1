@@ -145,7 +145,6 @@
 						<a href="#" class="list-group-item" id="price_rules"><i class="icon ti-harddrive"></i>	<?php echo lang('reports_price_rules'); ?></a>
 					<?php } ?>
 					
-					
 					<?php
 					if ($this->Employee->has_module_action_permission('reports', 'view_profit_and_loss', $this->Employee->get_logged_in_employee_info()->person_id))
 					{
@@ -178,13 +177,15 @@
 							<a href="#" class="list-group-item" id="registers"><i class="icon ti-search"></i>	<?php echo lang('reports_registers'); ?></a>
 					<?php } ?>
 					
+					<!--VENTAS-->
 					<?php
 					if ($this->Employee->has_module_action_permission('reports', 'view_sales', $this->Employee->get_logged_in_employee_info()->person_id))
 					{
 					?>
 						<a href="#" class="list-group-item" id="sales"><i class="icon ti-shopping-cart"></i>	<?php echo lang('reports_sales'); ?></a>
 					<?php } ?>
-					
+					<!--END-->
+
 					<?php
 					if ($this->Employee->has_module_action_permission('reports', 'view_store_account', $this->Employee->get_logged_in_employee_info()->person_id))
 					{
@@ -193,6 +194,7 @@
 							<a href="#" class="list-group-item" id="store-accounts"><i class="icon ti-credit-card"></i>	<?php echo lang('reports_store_account'); ?></a>
 						<?php } ?>
 					<?php } ?>
+					
 
 					<?php
 					if ($this->Employee->has_module_action_permission('reports', 'view_suppliers', $this->Employee->get_logged_in_employee_info()->person_id))
@@ -323,6 +325,7 @@
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/specific_employee');?>" ><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
 				</div>
 
+					<!--OPCIONES DE REPORTES VENTA-->
 				<div class="list-group sales hidden">
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_journal');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_journal'); ?></a>
 					
@@ -331,6 +334,7 @@
 					<?php } ?>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_reports'); ?></a>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/detailed_sales');?>" ><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
+					<a class="list-group-item" href="<?php echo site_url('reports/generate/sales_without_invoice');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_sales_without_invoice'); ?></a>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_day_of_week');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_day_of_week_report'); ?></a>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_time');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_sales_time_reports'); ?></a>
 					<?php if (can_display_graphical_report() ){ ?>
@@ -356,7 +360,6 @@
 				<div class="list-group price_rules hidden">
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_price_rules');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_reports'); ?></a>
 				</div>
-				
 				
 				
 				<div class="list-group deleted-sales hidden">
@@ -461,6 +464,7 @@
 				<div class="list-group suspended_sales hidden">
 					<a href="<?php echo site_url('reports/generate/detailed_suspended_sales');?>" class="list-group-item"><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
 					<a href="<?php echo site_url('reports/generate/layaway_statements');?>" class="list-group-item"><i class="icon ti-receipt"></i> <?php echo lang('reports_layaway_statements'); ?></a>
+					
 				</div>
 				
 				<div class="list-group taxes hidden">

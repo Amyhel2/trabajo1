@@ -595,36 +595,85 @@ class Billing extends Secure_area
         $this->load->view('billing/sincronizarGeneral');
     }
 
-    public function agregar() {
-    $data['nit'] = '';
-    $data['razon_social'] = '';
-    $data['email'] = '';
-    $this->load->view('billing/agregar', $data);
-  }
+    // En application/controllers/Billing.php
 
-  // Buscar por NIT o CI (botón o autocomplete)
-  public function buscar_por_nit() {
+/**
+ * Buscar cliente por NIT/CI usando customers.account_number
+ */
+public function buscar_cliente_por_nit()
+{
     $nit = $this->input->get('nit');
-    $this->load->model('Customer');
-    $cliente = $this->Customer->obtener_por_nit($nit);
-    if ($cliente) {
-      echo json_encode(['success' => true, 'cliente' => $cliente]);
-    } else {
-      echo json_encode(['success' => false]);
+    if (!$nit) {
+        echo json_encode(['success' => false]);
+        return;
     }
-  }
 
-  // Buscar por razón social (botón o autocomplete)
-  public function buscar_por_razon_social() {
-    $nombre = $this->input->get('razon_social');
-    $this->load->model('Customer');
-    $cliente = $this->Customer->obtener_por_razon_social($nombre);
+    $cliente = $this->db
+        ->select("
+            c.account_number        AS nit,
+            p.full_name             AS razon_social,
+            p.email
+        ")
+        ->from('phppos_customers AS c')
+        ->join('phppos_people    AS p', 'p.person_id = c.person_id')
+        ->where('c.account_number', $nit)
+        ->where('c.deleted', 0)
+        ->get()
+        ->row();
+
     if ($cliente) {
-      echo json_encode(['success' => true, 'cliente' => $cliente]);
+        echo json_encode([
+            'success' => true,
+            'data'    => [
+                'nit'          => $cliente->nit,
+                'razon_social' => $cliente->razon_social,
+                'email'        => $cliente->email
+            ]
+        ]);
     } else {
-      echo json_encode(['success' => false]);
+        echo json_encode(['success' => false]);
     }
-  }
+}
+
+/**
+ * Buscar cliente por Razón Social usando people.full_name
+ */
+public function buscar_cliente_por_nombre()
+{
+    $nombre = $this->input->get('nombre');
+    if (!$nombre) {
+        echo json_encode(['success' => false]);
+        return;
+    }
+
+    $cliente = $this->db
+        ->select("
+            c.account_number        AS nit,
+            p.full_name             AS razon_social,
+            p.email
+        ")
+        ->from('phppos_customers AS c')
+        ->join('phppos_people    AS p', 'p.person_id = c.person_id')
+        ->like('p.full_name', $nombre)
+        ->where('c.deleted', 0)
+        ->limit(1)
+        ->get()
+        ->row();
+
+    if ($cliente) {
+        echo json_encode([
+            'success' => true,
+            'data'    => [
+                'nit'          => $cliente->nit,
+                'razon_social' => $cliente->razon_social,
+                'email'        => $cliente->email
+            ]
+        ]);
+    } else {
+        echo json_encode(['success' => false]);
+    }
+}
+
 
 
 

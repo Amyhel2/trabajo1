@@ -445,7 +445,7 @@ if (is_on_demo_host()) { ?>
 						<li><a href="<?php echo site_url('invoices/index/customer'); ?>"><i class="icon ti-user"></i><?php echo lang('reports_customers')?></a></li>
 						<li><a href="<?php echo site_url('invoices/index/supplier'); ?>"><i class="icon ti-download"></i><?php echo lang('reports_suppliers')?></a></li>
 
-				        <!--Url de facturacion-->
+				        <!--PESTANA EN EL MENU DE FACTURACION-->
 						<li><a href="<?php echo site_url('billing/index'); ?>"><i class="icon ti-receipt"></i><?php echo lang('reports_invoices')?></a></li>
 
 						<?php if($this->config->item('use_saudi_tax_config')){ 
