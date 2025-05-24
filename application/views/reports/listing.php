@@ -325,7 +325,7 @@
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/specific_employee');?>" ><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
 				</div>
 
-					<!--OPCIONES DE REPORTES VENTA-->
+				<!--OPCIONES DE REPORTES VENTA-->
 				<div class="list-group sales hidden">
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_journal');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_journal'); ?></a>
 					
@@ -334,12 +334,18 @@
 					<?php } ?>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_reports'); ?></a>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/detailed_sales');?>" ><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
+					
+					<!--Nueva opcion implementada al menu lateral-->
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/sales_without_invoice');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_sales_without_invoice'); ?></a>
+					<!---->
+					
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_day_of_week');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_day_of_week_report'); ?></a>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_time');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_sales_time_reports'); ?></a>
+					
 					<?php if (can_display_graphical_report() ){ ?>
 						<a class="list-group-item" href="<?php echo site_url('reports/generate/graphical_summary_sales_time');?>" ><i class="icon ti-bar-chart-alt"></i> <?php echo lang('reports_summary_sales_graphical_time_reports'); ?></a>
 					<?php } ?>
+
 					<?php if ($this->config->item('ecommerce_platform')) { ?>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/detailed_ecommerce_sales');?>" ><i class="icon ti-calendar"></i> <?php echo lang('common_ecommerce'); ?></a>
 					<?php } ?>
@@ -349,14 +355,14 @@
 					<?php } ?>
 					
 					<?php if ($this->config->item('enable_tips')) { ?>
-					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_tips');?>" ><i class="ion-cash"></i> <?php echo lang('common_tips'); ?></a>
+					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_tips');?>" vol><i class="ion-cash"></i> <?php echo lang('common_tips'); ?></a>
 					<?php } ?>
 					
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/detailed_last_4_cc');?>" ><i class="icon ti-calendar"></i> <?php echo lang('reports_search_last_4_credit_card'); ?></a>
 					
 					
 				</div>
-				
+				<!---->
 				<div class="list-group price_rules hidden">
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_price_rules');?>" ><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_reports'); ?></a>
 				</div>

@@ -1,4 +1,7 @@
 <?php
+
+use BaseetApp\UBL\Contact;
+
 require_once ("Secure_area.php");
 require_once (APPPATH."traits/creditcardProcessingTrait.php");
 
@@ -46,6 +49,7 @@ class Reports extends Secure_area
 		
 		if (!empty($get))
 		{ 
+
 			if ($this->input->get('report_type') == 'simple')
 			{
 				$report_date_range_simple = $this->Employee->has_module_action_permission('reports', 'can_change_report_date', $this->Employee->get_logged_in_employee_info()->person_id) ? $this->input->get('report_date_range_simple') : 'TODAY';
