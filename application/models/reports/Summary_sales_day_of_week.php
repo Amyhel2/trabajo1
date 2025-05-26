@@ -64,8 +64,6 @@ class Summary_sales_day_of_week extends Report
 			array_unshift($input_params,$tier_entity_data);
 		}
 		
-		
-		
 		$input_data['input_report_title'] = lang('reports_report_options');
 		$input_data['input_params'] = $input_params;
 		return $input_data;

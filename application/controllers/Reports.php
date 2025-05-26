@@ -43,7 +43,14 @@ class Reports extends Secure_area
 
 		$report_model = Report::get_report_model($report);
 
-		$this->check_action_permission($report_model->settings['permission_action']);
+		// para “sales_without_invoice” reutilizamos el permiso general de ventas
+if ($report === 'sales_without_invoice') {
+    $this->check_action_permission('view_sales');
+} else {
+    $this->check_action_permission($report_model->settings['permission_action']);
+}
+
+
 		$output_data = array();
 		$get = $this->input->get();
 		

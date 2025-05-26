@@ -468,6 +468,7 @@ $lang['reports_cannot_see_inventory_this_far_in_past'] = 'No puedes ver el inven
 $lang['reports_day_of_week_report'] = 'Informe del dia de la semana';
 //Insercion de nombre ventas sin factura//
 $lang['reports_sales_without_invoice'] = 'Informe de ventas sin factura';
+
 //
 $lang['reports_tax_based_on_payments'] = 'Impuesto basado en pagos';
 $lang['reports_tips'] = 'Consejos';

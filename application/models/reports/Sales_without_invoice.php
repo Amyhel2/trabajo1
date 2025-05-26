@@ -3,74 +3,92 @@ require_once("Report.php");
 
 class Sales_without_invoice extends Report
 {
-    protected $settings = [
-        'permission_action' => 'view_sales_without_invoice', // <- Este permiso debes darlo al usuario
-        'display' => 'tabular',
-        'subtitle' => '',
-        'columns' => [],
-    ];
-
-    public function __construct()
+    function __construct()
     {
         parent::__construct();
     }
 
+    // No necesita filtros para ejecutarse
+    public function getInputData()
+    {
+        return array(
+            'report_type' => 'simple',
+            'input_params' => array()
+        );
+    }
+
+    public function getDataColumns()
+    {
+        return array(
+            'summary' => array(
+                array('data' => 'ID Venta', 'align' => 'left'),
+                array('data' => 'Fecha', 'align' => 'left'),
+                array('data' => 'Cliente', 'align' => 'left'),
+                array('data' => 'Total', 'align' => 'right'),
+            ),
+            'details' => array() // No detalles por ahora
+        );
+    }
+
     public function getData()
     {
+        $this->db->select('sales.sale_id, sales.sale_time, CONCAT(customers.first_name, " ", customers.last_name) AS customer_name, sales.total');
         $this->db->from('sales');
-        $this->db->where('is_invoiced', 0); // Ajusta al campo que uses para saber si fue facturado
-        $this->db->join('people', 'sales.customer_id = people.person_id', 'left');
-        $this->db->select('sales.sale_id, sales.sale_time, people.first_name, people.last_name, sales.total');
+        $this->db->join('customers', 'customers.person_id = sales.customer_id', 'left');
+        $this->db->where('sales.invoice_number IS NULL');
+        $this->db->where('sales.deleted', 0); // Solo ventas válidas
 
-        return $this->db->get()->result_array();
+        $result = $this->db->get()->result_array();
+
+        $data = array();
+        foreach ($result as $row)
+        {
+            $data[] = array(
+                'sale_id' => $row['sale_id'],
+                'sale_time' => $row['sale_time'],
+                'customer' => $row['customer_name'],
+                'total' => $row['total']
+            );
+        }
+
+        return $data;
     }
 
     public function getSummaryData()
     {
         $this->db->select('SUM(total) as total');
         $this->db->from('sales');
-        $this->db->where('is_invoiced', 0);
+        $this->db->where('invoice_number IS NULL');
+        $this->db->where('deleted', 0);
 
-        return $this->db->get()->row_array();
+        $row = $this->db->get()->row_array();
+        return array('total' => $row['total']);
     }
 
-    public function getInputData()
-    {
-        return [
-            'input_params' => [
-                [
-                    'view' => 'date_range',
-                    'with_time' => true,
-                ],
-            ]
-        ];
-    }
-
-    // Aquí procesamos la lógica del reporte
     public function getOutputData()
     {
-        $this->load->model('Sale');
+        $report_data = $this->getData();
+        $tabular_data = array();
 
-        $sales = $this->Sale->get_sales_without_invoice(
-            $this->params['start_date'],
-            $this->params['end_date']
-        );
-
-        $summary_data = [];
-
-        foreach ($sales as $sale)
+        foreach ($report_data as $row)
         {
-            $summary_data[] = [
-                'sale_id' => $sale['sale_id'],
-                'customer' => $sale['customer_name'],
-                'sale_time' => $sale['sale_time'],
-                'total' => to_currency($sale['total'])
-            ];
+            $tabular_data[] = array(
+                $row['sale_id'],
+                date(get_date_format(), strtotime($row['sale_time'])),
+                $row['customer'],
+                to_currency($row['total'])
+            );
         }
 
-        return [
-            'summary' => $summary_data,
-            'title' => lang('reports_sales_without_invoice')
-        ];
+        $data = array(
+            'view' => 'tabular',
+            'title' => 'Ventas sin Factura',
+            'headers' => $this->getDataColumns(),
+            'data' => $tabular_data,
+            'summary_data' => $this->getSummaryData(),
+            'export_excel' => false
+        );
+
+        return $this->load->view("reports/tabular", $data, true);
     }
 }
