@@ -75,7 +75,7 @@ $this->load->view("partial/header_facturacion");
         <br>
         <div class="card shadow-sm mb-4">
           <div class="card-header bg-primary text-white">
-            <strong><i class="fa fa-list"></i> Detalle de Venta</strong>
+            <strong><i class="fa fa-list"></i> Detalle de la Venta</strong>
           </div>
           <div class="card-body p-0">
             <div class="table-responsive">
