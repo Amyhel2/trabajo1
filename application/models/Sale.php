@@ -5222,6 +5222,7 @@ class Sale extends MY_Model
 		return null;
 	}
 
+	//Implementacion de funciones extras para el modulo de facturacion
 	public function get_detalle_venta_completo($sale_id)
 	{
 		$this->db->select("
@@ -5266,6 +5267,7 @@ class Sale extends MY_Model
 
 		return $query->result(); // devolverá array de objetos (uno por ítem vendido)
 	}
+
 
 	public function get_descuento_total($sale_id)
 	{

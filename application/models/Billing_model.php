@@ -1,15 +1,20 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+require_once(APPPATH . "traits/saleTrait.php");
+require_once(APPPATH . "models/cart/PHPPOSCartSale.php");
 
-class Factura_model extends CI_Model
+
+class Billing_model extends MY_Model
 {
-    protected $table = 'phppos_facturas';
-use saleTrait;
-    public function __construct()
-    {
-        parent::__construct();
-    }
+    use saleTrait;
 
+	public function __construct()
+	{
+		parent::__construct();
+		$this->load->model('Inventory');
+	}
+    protected $table = 'phppos_facturas';
+
+    
     /** Inserta un nuevo registro y devuelve su ID local */
     public function insert(array $data)
     {
@@ -34,7 +39,7 @@ use saleTrait;
             ->update($this->table, ['estado' => $estado]);
     }
 
-    /** Marca que el PDF ya se generó */
+    
     public function mark_pdf_generated($id)
     {
         return $this->db
@@ -44,6 +49,18 @@ use saleTrait;
 
     public function obtener_todos() {
     return $this->db->get('puntos_venta_siat')->result();
+    
 }
+
+    public function get_sales_without_invoice($start_date, $end_date)
+    {
+        $this->db->select('sale_id, sale_time, customer_id, total, is_invoiced');
+        $this->db->from('phppos_sales');
+        $this->db->where('is_invoiced', 0);
+        $this->db->where('sale_time >=', $start_date);
+        $this->db->where('sale_time <=', $end_date);
+        $this->db->order_by('sale_time', 'DESC');
+        return $this->db->get()->result_array();
+    }
 
 }

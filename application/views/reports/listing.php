@@ -302,15 +302,20 @@
 						<a class="list-group-item" href="<?php echo site_url('reports/generate/graphical_summary_sales'); ?>"><i class="icon ti-bar-chart-alt"></i> <?php echo lang('reports_graphical_reports'); ?></a>
 					<?php } ?>
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales'); ?>"><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_reports'); ?></a>
+					
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/detailed_sales'); ?>"><i class="icon ti-calendar"></i> <?php echo lang('reports_detailed_reports'); ?></a>
 
-					<!-- Opcion de informe de venta sin factura -->
+					<!-- Opcion de informe de venta sin factura usando con url independiente-->
 					<a class="list-group-item"
-						href="<?php echo site_url('reports/generate/sales_without_invoice'); ?>">
+						href="<?php echo site_url('billing/sales_without_invoice'); ?>">
 						<i class="icon ti-receipt"></i> <?php echo lang('reports_sales_without_invoice'); ?>
 					</a>
 
-					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_day_of_week'); ?>"><i class="icon ti-receipt"></i> <?php echo lang('reports_day_of_week_report'); ?></a>
+					<a class="list-group-item" 
+						href="<?php echo site_url('reports/generate/summary_sales_day_of_week'); ?>">
+						<i class="icon ti-receipt"></i> <?php echo lang('reports_day_of_week_report'); ?>
+					</a>
+
 					<a class="list-group-item" href="<?php echo site_url('reports/generate/summary_sales_time'); ?>"><i class="icon ti-receipt"></i> <?php echo lang('reports_summary_sales_time_reports'); ?></a>
 
 					<?php if (can_display_graphical_report()) { ?>

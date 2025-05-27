@@ -466,6 +466,7 @@ $lang['reports_damaged_qty'] = 'Cantidad dañada';
 $lang['reports_show_negative_inventory_only'] = 'Mostrar solo inventario negativo';
 $lang['reports_cannot_see_inventory_this_far_in_past'] = 'No puedes ver el inventario tan lejos en el pasado';
 $lang['reports_day_of_week_report'] = 'Informe del dia de la semana';
+
 //Insercion de nombre ventas sin factura//
 $lang['reports_sales_without_invoice'] = 'Informe de ventas sin factura';
 

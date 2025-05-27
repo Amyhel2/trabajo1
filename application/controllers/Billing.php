@@ -23,7 +23,7 @@ class Billing extends Secure_area
         parent::__construct();
         $this->load->helper(['form', 'url']);
         $this->load->library('session');
-        $this->load->model(['Sucursal_model', 'PuntoVenta_model']);
+        $this->load->model(['Sucursal_model', 'PuntoVenta_model','Billing_model']);
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
@@ -674,9 +674,19 @@ public function buscar_cliente_por_nombre()
     }
 }
 
+//Funcion para ventas sin factura 
+	public function sales_without_invoice()
+{
+   
+    $start_date = $this->input->get('start_date') ?: date('Y-m-01 00:00:00');
+    $end_date = $this->input->get('end_date') ?: date('Y-m-d 23:59:59');
 
+    $data['ventas'] = $this->Billing_model->get_sales_without_invoice($start_date, $end_date);
+    $data['start_date'] = $start_date;
+    $data['end_date'] = $end_date;
 
-
+    $this->load->view('billing/sales_without_invoice', $data);
+}
 
 }
 
