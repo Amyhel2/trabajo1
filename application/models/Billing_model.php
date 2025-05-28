@@ -7,14 +7,14 @@ class Billing_model extends MY_Model
 {
     use saleTrait;
 
-	public function __construct()
-	{
-		parent::__construct();
-		$this->load->model('Inventory');
-	}
+    public function __construct()
+    {
+        parent::__construct();
+        $this->load->model('Appconfig');
+    }
     protected $table = 'phppos_facturas';
 
-    
+
     /** Inserta un nuevo registro y devuelve su ID local */
     public function insert(array $data)
     {
@@ -39,7 +39,7 @@ class Billing_model extends MY_Model
             ->update($this->table, ['estado' => $estado]);
     }
 
-    
+
     public function mark_pdf_generated($id)
     {
         return $this->db
@@ -47,20 +47,36 @@ class Billing_model extends MY_Model
             ->update($this->table, ['pdf_generado' => 1]);
     }
 
-    public function obtener_todos() {
-    return $this->db->get('puntos_venta_siat')->result();
-    
-}
+    public function obtener_todos()
+    {
+        return $this->db->get('puntos_venta_siat')->result();
+    }
 
     public function get_sales_without_invoice($start_date, $end_date)
     {
-        $this->db->select('sale_id, sale_time, customer_id, total, is_invoiced');
+        $this->db->select('phppos_sales.sale_id, phppos_sales.sale_time, phppos_sales.total, phppos_sales.is_invoiced, phppos_people.full_name, phppos_customers.account_number');
         $this->db->from('phppos_sales');
-        $this->db->where('is_invoiced', 0);
-        $this->db->where('sale_time >=', $start_date);
-        $this->db->where('sale_time <=', $end_date);
-        $this->db->order_by('sale_time', 'DESC');
+        $this->db->join('phppos_people', 'phppos_sales.customer_id = phppos_people.person_id', 'left');
+        $this->db->join('phppos_customers', 'phppos_people.person_id = phppos_customers.person_id', 'left');
+        $this->db->where('phppos_sales.is_invoiced', 0);
+        $this->db->where('phppos_sales.sale_time >=', $start_date);
+        $this->db->where('phppos_sales.sale_time <=', $end_date);
+        $this->db->order_by('phppos_sales.sale_time', 'DESC');
         return $this->db->get()->result_array();
     }
 
+    public function get_sales_with_invoice($start_date, $end_date)
+    {
+        $this->db->select('phppos_sales.sale_id, phppos_sales.sale_time, phppos_sales.total, phppos_sales.is_invoiced, phppos_people.full_name, phppos_customers.account_number');
+        $this->db->from('phppos_sales');
+        $this->db->join('phppos_people', 'phppos_sales.customer_id = phppos_people.person_id', 'left');
+        $this->db->join('phppos_customers', 'phppos_people.person_id = phppos_customers.person_id', 'left');
+        $this->db->where('phppos_sales.is_invoiced', 1);
+        $this->db->where('phppos_sales.sale_time >=', $start_date);
+        $this->db->where('phppos_sales.sale_time <=', $end_date);
+        $this->db->order_by('phppos_sales.sale_time', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+  
 }

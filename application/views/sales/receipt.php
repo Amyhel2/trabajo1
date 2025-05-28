@@ -171,10 +171,14 @@ if (!(isset($standalone) && $standalone)) {
 							</li>
 						<?php } ?>
 								<br>
-						<!--Implementacion del boton factura en la venta-->
+								<li>
+<!--Implementacion del boton factura en la venta-->
 						<a href="<?= site_url("billing/facturar/$sale_id_raw") ?>" class="btn btn-primary">
 							<i class="fa fa-file-invoice"></i> Generar Factura
 						</a>
+
+								</li>
+						
 					</ul>
 				</div>
 			</div>

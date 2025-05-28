@@ -23,7 +23,7 @@ class Billing extends Secure_area
         parent::__construct();
         $this->load->helper(['form', 'url']);
         $this->load->library('session');
-        $this->load->model(['Sucursal_model', 'PuntoVenta_model','Billing_model']);
+        $this->load->model(['Sucursal_model', 'PuntoVenta_model', 'Billing_model']);
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
@@ -304,8 +304,14 @@ class Billing extends Secure_area
     // CONFIGURACION
     public function configuracion()
     {
-        $this->load->view('billing/configuracion');
+        $this->load->model('Appconfig');
+        $company_name = $this->Appconfig->get_company_name();
+
+        $data['company_name'] = $company_name;
+
+        $this->load->view('billing/configuracion', $data);
     }
+
     public function editarConfiguracion()
     {
         $this->load->view('billing/editarConfiguracion');
@@ -499,7 +505,7 @@ class Billing extends Secure_area
     public function guardarPuntoVenta()
     {
         $payload = [
-            'funcion'         => 'newPos',              
+            'funcion'         => 'newPos',
             'nroSucursal'     => $this->input->post('nroSucursal'),
             'nroPuntoVenta'   => $this->input->post('nroPuntoVenta'),
             'nombrePuntoVenta' => $this->input->post('nombre'),
@@ -510,7 +516,7 @@ class Billing extends Secure_area
         $resp = $this->call_api($payload);
 
         if (!empty($resp['ok'])) {
-           
+
             $s = $this->db->where('codigo_sucursal', $payload['nroSucursal'])
                 ->get('sucursales_siat')
                 ->row();
@@ -597,97 +603,146 @@ class Billing extends Secure_area
 
     // En application/controllers/Billing.php
 
-/**
- * Buscar cliente por NIT/CI usando customers.account_number
- */
-public function buscar_cliente_por_nit()
-{
-    $nit = $this->input->get('nit');
-    if (!$nit) {
-        echo json_encode(['success' => false]);
-        return;
-    }
+    /**
+     * Buscar cliente por NIT/CI usando customers.account_number
+     */
+    public function buscar_cliente_por_nit()
+    {
+        $nit = $this->input->get('nit');
+        if (!$nit) {
+            echo json_encode(['success' => false]);
+            return;
+        }
 
-    $cliente = $this->db
-        ->select("
+        $cliente = $this->db
+            ->select("
             c.account_number        AS nit,
             p.full_name             AS razon_social,
             p.email
         ")
-        ->from('phppos_customers AS c')
-        ->join('phppos_people    AS p', 'p.person_id = c.person_id')
-        ->where('c.account_number', $nit)
-        ->where('c.deleted', 0)
-        ->get()
-        ->row();
+            ->from('phppos_customers AS c')
+            ->join('phppos_people    AS p', 'p.person_id = c.person_id')
+            ->where('c.account_number', $nit)
+            ->where('c.deleted', 0)
+            ->get()
+            ->row();
 
-    if ($cliente) {
-        echo json_encode([
-            'success' => true,
-            'data'    => [
-                'nit'          => $cliente->nit,
-                'razon_social' => $cliente->razon_social,
-                'email'        => $cliente->email
-            ]
-        ]);
-    } else {
-        echo json_encode(['success' => false]);
-    }
-}
-
-/**
- * Buscar cliente por Razón Social usando people.full_name
- */
-public function buscar_cliente_por_nombre()
-{
-    $nombre = $this->input->get('nombre');
-    if (!$nombre) {
-        echo json_encode(['success' => false]);
-        return;
+        if ($cliente) {
+            echo json_encode([
+                'success' => true,
+                'data'    => [
+                    'nit'          => $cliente->nit,
+                    'razon_social' => $cliente->razon_social,
+                    'email'        => $cliente->email
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
     }
 
-    $cliente = $this->db
-        ->select("
+    /**
+     * Buscar cliente por Razón Social usando people.full_name
+     */
+    public function buscar_cliente_por_nombre()
+    {
+        $nombre = $this->input->get('nombre');
+        if (!$nombre) {
+            echo json_encode(['success' => false]);
+            return;
+        }
+
+        $cliente = $this->db
+            ->select("
             c.account_number        AS nit,
             p.full_name             AS razon_social,
             p.email
         ")
-        ->from('phppos_customers AS c')
-        ->join('phppos_people    AS p', 'p.person_id = c.person_id')
-        ->like('p.full_name', $nombre)
-        ->where('c.deleted', 0)
-        ->limit(1)
-        ->get()
-        ->row();
+            ->from('phppos_customers AS c')
+            ->join('phppos_people    AS p', 'p.person_id = c.person_id')
+            ->like('p.full_name', $nombre)
+            ->where('c.deleted', 0)
+            ->limit(1)
+            ->get()
+            ->row();
 
-    if ($cliente) {
-        echo json_encode([
-            'success' => true,
-            'data'    => [
-                'nit'          => $cliente->nit,
-                'razon_social' => $cliente->razon_social,
-                'email'        => $cliente->email
-            ]
-        ]);
-    } else {
-        echo json_encode(['success' => false]);
+        if ($cliente) {
+            echo json_encode([
+                'success' => true,
+                'data'    => [
+                    'nit'          => $cliente->nit,
+                    'razon_social' => $cliente->razon_social,
+                    'email'        => $cliente->email
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
     }
-}
 
-//Funcion para ventas sin factura 
-	public function sales_without_invoice()
+    //Funcion para ventas sin factura 
+    public function sales_without_invoice()
 {
-   
-    $start_date = $this->input->get('start_date') ?: date('Y-m-01 00:00:00');
-    $end_date = $this->input->get('end_date') ?: date('Y-m-d 23:59:59');
+    // Default date range: first day of current month 00:00:00 to today 23:59:59
+    $default_start = date('Y-m-01') . ' 00:00:00';
+    $default_end   = date('Y-m-d') . ' 23:59:59';
 
-    $data['ventas'] = $this->Billing_model->get_sales_without_invoice($start_date, $end_date);
-    $data['start_date'] = $start_date;
-    $data['end_date'] = $end_date;
+    // Initialize sales array empty
+    $sales = [];
 
-    $this->load->view('billing/sales_without_invoice', $data);
+    // Prepare start_date and end_date for the view (always use defaults if GET not present)
+    $start_date = $this->input->get('start_date')
+        ? $this->input->get('start_date') . ' 00:00:00'
+        : $default_start;
+    $end_date = $this->input->get('end_date')
+        ? $this->input->get('end_date') . ' 23:59:59'
+        : $default_end;
+
+    // Only fetch data if the user has submitted the date filters
+    if ($this->input->get('start_date') && $this->input->get('end_date')) {
+        $this->load->model('Billing_model');
+        $sales = $this->Billing_model->get_sales_without_invoice($start_date, $end_date);
+    }
+
+    // Pass data to the view
+    $this->load->view('billing/sales_without_invoice', [
+        'sales'      => $sales,
+        'start_date' => $start_date,
+        'end_date'   => $end_date
+    ]);
 }
 
+public function sales_with_invoice()
+{
+    // Default date range: first day of current month 00:00:00 to today 23:59:59
+    $default_start = date('Y-m-01') . ' 00:00:00';
+    $default_end   = date('Y-m-d') . ' 23:59:59';
+
+    // Initialize sales array empty
+    $sales = [];
+
+    // Prepare start_date and end_date for the view
+    $start_date = $this->input->get('start_date')
+        ? $this->input->get('start_date') . ' 00:00:00'
+        : $default_start;
+    $end_date = $this->input->get('end_date')
+        ? $this->input->get('end_date') . ' 23:59:59'
+        : $default_end;
+
+    // Only fetch data if filters are set
+    if ($this->input->get('start_date') && $this->input->get('end_date')) {
+        $this->load->model('Billing_model');
+        $sales = $this->Billing_model->get_sales_with_invoice($start_date, $end_date);
+    }
+
+    // Pass to view
+    $this->load->view('billing/sales_with_invoice', [
+        'sales'      => $sales,
+        'start_date' => $start_date,
+        'end_date'   => $end_date
+    ]);
 }
 
-
+    
+    
+}

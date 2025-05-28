@@ -13,7 +13,6 @@ $this->load->view("partial/header_facturacion");
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <div class="row">
-              
 
               <div class="col-md-4 mb-3">
                 <label for="codbar">Codigo (Barras):</label>
@@ -54,9 +53,6 @@ $this->load->view("partial/header_facturacion");
               </div>
             </div>
             <div class="row">
-              
-              
-
               <div class="col-md-4 mb-3">
                 <label>Complemento:</label>
                 <input type="text" id="complemento_ci" class="form-control">

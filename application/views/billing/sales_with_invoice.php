@@ -2,7 +2,7 @@
 
 <div class="container-fluid mt-4">
   <h4 class="mb-3">
-    <i class="fa fa-file-invoice text-primary"></i> Informe de ventas sin factura
+    <i class="fa fa-file-invoice text-primary"></i> Informe de ventas facturadas
   </h4>
 
   <?php if ($msg = $this->session->flashdata('success')): ?>
@@ -57,7 +57,7 @@
             <?php else: ?>
               <tr>
                 <td colspan="5" class="text-center text-muted py-3">
-                  <i class="fa fa-info-circle"></i> No hay ventas sin factura en este rango de fechas.
+                  <i class="fa fa-info-circle"></i> No hay ventas facturadas en este rango de fechas.
                 </td>
               </tr>
             <?php endif; ?>

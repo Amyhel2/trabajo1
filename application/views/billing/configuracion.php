@@ -1,4 +1,3 @@
-
 <?php
 $this->load->view("partial/header");
 $this->load->view("partial/header_facturacion");
@@ -17,8 +16,6 @@ $this->load->view("partial/header_facturacion");
 
         <button type="submit" class="btn btn-success btn-lg hidden-sm hidden-xs" title="Editar">
           <span class="ion-edit"></span> Editar
-          </a>
-
       </div>
     </div>
 
@@ -44,8 +41,9 @@ $this->load->view("partial/header_facturacion");
         <div class="row mt-3">
           <div class="col-md-4">
             <label>Razón Social:</label>
-            <input type="text" class="form-control" name="razon_social" value="<?php echo $config['codigoPuntoVenta'] ?? ''; ?>">
+            <input type="text" class="form-control" name="razon_social" value="<?php echo $company_name ?? ''; ?>">
           </div>
+
           <div class="col-md-4">
             <label>Modalidad:</label>
             <select class="form-control" name="modalidad" id="">
@@ -160,7 +158,7 @@ $this->load->view("partial/header_facturacion");
               <li>
                 <button type="submit" class="btn btn cobn btn-primary btn-lg"><span class="ion-ios-search-strong"></span><span class="hidden-xs hidden-sm"></span></button>
               </li>
-              
+
             </ul>
           </div>
 
@@ -195,4 +193,3 @@ $this->load->view("partial/header_facturacion");
 </div>
 
 <?php $this->load->view("partial/footer"); ?>
- 

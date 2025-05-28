@@ -311,6 +311,11 @@
 						<i class="icon ti-receipt"></i> <?php echo lang('reports_sales_without_invoice'); ?>
 					</a>
 
+					<a class="list-group-item"
+						href="<?php echo site_url('billing/sales_with_invoice'); ?>">
+						<i class="icon ti-receipt"></i> <?php echo lang('reports_sales_with_invoice'); ?>
+					</a>
+
 					<a class="list-group-item" 
 						href="<?php echo site_url('reports/generate/summary_sales_day_of_week'); ?>">
 						<i class="icon ti-receipt"></i> <?php echo lang('reports_day_of_week_report'); ?>
