@@ -80,7 +80,7 @@ class Billing extends Secure_area
 
         $detalle = $this->call_api([
             'funcion' => 'listarFacturas',
-            'ids'     => '1',
+            'ids'     => '1',                           // se debe implementar un usuario dinamico
             'fechainicio' => date('Y-m-d'),
             'fechafin'    => date('Y-m-d')
         ]);
@@ -741,6 +741,9 @@ public function sales_with_invoice()
         'start_date' => $start_date,
         'end_date'   => $end_date
     ]);
+}
+public function test(){
+    $this->load->view('billing/test');
 }
 
     

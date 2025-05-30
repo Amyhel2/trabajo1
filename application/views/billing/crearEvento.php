@@ -18,6 +18,7 @@
 
   <div class="card shadow-sm">
     <div class="card-body">
+      
       <form method="post" action="<?php echo site_url('billing/crearEvento'); ?>">
         <div class="row">
           <div class="col-md-6 mb-3">

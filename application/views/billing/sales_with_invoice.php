@@ -32,6 +32,8 @@
       <strong><i class="fa fa-list"></i> Resultados</strong>
     </div>
     <div class="card-body p-0">
+
+      
       <div class="table-responsive">
         <table class="table table-striped table-hover mb-0">
           <thead class="thead-dark">
