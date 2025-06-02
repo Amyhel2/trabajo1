@@ -1,7 +1,6 @@
-<?php
-$this->load->view("partial/header");
-$this->load->view("partial/header_facturacion");
-?>
+<?php $this->load->view('partial/header', $datos_usuario);?>
+
+<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
 
 <div class="container-fluid">
 <form method="post" action="<?php echo site_url('billing/guardarConfiguracion'); ?>">

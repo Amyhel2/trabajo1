@@ -1,5 +1,3 @@
-
-
 <style>
 .nav-facturacion {
   margin-bottom: 20px;
@@ -22,6 +20,8 @@
   color: #fff !important;
 }
 </style>
+
+<!-- Barra de navegacion del modulo de facturacion-->
 
 <ul class="nav nav-pills nav-facturacion">
   <li class="nav-item">
@@ -60,3 +60,18 @@
     </a>
   </li>
 </ul>
+
+<?php if (isset($nombre_empleado)): ?>
+  <div class="row bg-light py-2 border-bottom">
+    <div class="col-md-4 text-left">
+      <strong>Empleado:</strong> <?= htmlspecialchars($nombre_empleado); ?>
+    </div>
+    <div class="col-md-4 text-center">
+      <strong>Sucursal:</strong> <?= htmlspecialchars($nombre_sucursal); ?>
+    </div>
+    <div class="col-md-4 text-right">
+      <strong>Punto de Venta:</strong> <?= htmlspecialchars($nombre_punto_venta); ?> (Nro <?= htmlspecialchars($nro_punto_venta); ?>)
+    </div>
+  </div>
+<?php endif; ?>
+<br>

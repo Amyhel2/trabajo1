@@ -1,7 +1,7 @@
-<?php
-$this->load->view("partial/header");
-$this->load->view("partial/header_facturacion");
-?>
+<?php $this->load->view('partial/header', $datos_usuario);?>
+
+<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
+
 <div class="container-fluid">
   <div class="row mt-3">
     <div class="col-md-8">

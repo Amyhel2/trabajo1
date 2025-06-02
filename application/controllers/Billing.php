@@ -29,34 +29,85 @@ class Billing extends Secure_area
 
     // Listado de facturas
     public function index()
-    {
-        $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
-        $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
+{
+    $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
+    $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
 
-        if ($inicio > $fin) {
-            $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
-            redirect('billing/index');
-        }
+    if ($inicio > $fin) {
+    $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
+    redirect('billing/index');
+}
 
-        $facturas = [];
-        $resp = $this->call_api([
-            'funcion'     => 'listarFacturas',
-            'ids'         => '1',
-            'fechainicio' => $inicio,
-            'fechafin'    => $fin
-        ]);
-        if (isset($resp['facturas'])) {
-            $facturas = $resp['facturas'];
-        } else {
-            $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
-        }
+// Obtener el ID del empleado logueado desde sesión
+$employee_id = $this->session->userdata('person_id');
 
-        $this->load->view('billing/index', [
-            'facturas'    => $facturas,
-            'fechainicio' => $inicio,
-            'fechafin'    => $fin
-        ]);
-    }
+if (!$employee_id) {
+    $this->session->set_flashdata('error', 'Empleado no identificado.');
+    redirect('login');
+}
+
+// Consultar los datos del empleado, sucursal y punto de venta
+$this->db->select('
+    people.first_name,
+    people.last_name,
+    suc.id AS sucursal_id,
+    suc.nombre AS nombre_sucursal,
+    punto.nombre AS nombre_punto_venta,
+    punto.nro_punto_venta
+');
+$this->db->from('phppos_people AS people');
+$this->db->join('phppos_sucursal_empleado AS rel', 'people.person_id = rel.employee_id');
+$this->db->join('phppos_sucursales_siat AS suc', 'suc.id = rel.sucursal_id');
+$this->db->join('phppos_puntos_venta_siat AS punto', 'punto.id_sucursal = suc.id');
+$this->db->where('people.person_id', $employee_id);
+$this->db->limit(1);
+$row = $this->db->get()->row();
+
+if (!$row) {
+    $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
+    $this->load->view('partial/header');
+    $this->load->view('billing/index', [
+        'facturas'    => [],
+        'fechainicio' => $inicio,
+        'fechafin'    => $fin
+    ]);
+    return;
+}
+
+$datos_usuario = [
+    'nombre_empleado'    => trim($row->first_name . ' ' . $row->last_name),
+    'nombre_sucursal'    => $row->nombre_sucursal,
+    'nombre_punto_venta' => $row->nombre_punto_venta,
+    'nro_punto_venta'    => $row->nro_punto_venta
+];
+
+$sucursal_id = $row->sucursal_id;
+
+// Llamar a la API con sucursal dinámica
+$resp = $this->call_api([
+    'funcion'     => 'listarFacturas',
+    'ids'         => $sucursal_id,
+    'fechainicio' => $inicio,
+    'fechafin'    => $fin
+]);
+
+$facturas = [];
+if (isset($resp['facturas'])) {
+    $facturas = $resp['facturas'];
+} else {
+    $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
+}
+
+
+$this->load->view('billing/index', [
+    'facturas'        => $facturas,
+    'fechainicio'     => $inicio,
+    'fechafin'        => $fin,
+    'datos_usuario'   => $datos_usuario
+]);
+
+}
+
 
     // Ver / Descargar PDF
     public function ver_pdf($idfac = null)

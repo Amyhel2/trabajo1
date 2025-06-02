@@ -170,15 +170,15 @@ if (!(isset($standalone) && $standalone)) {
 								<?php echo anchor('sales/return_order/' . $sale_id_raw, lang('sales_return', '', array(), TRUE), array('id' => 'return_order', 'class' => 'btn btn-primary btn-lg hidden-print')); ?>
 							</li>
 						<?php } ?>
-								<br>
-								<li>
-<!--Implementacion del boton factura en la venta-->
-						<a href="<?= site_url("billing/facturar/$sale_id_raw") ?>" class="btn btn-primary">
-							<i class="fa fa-file-invoice"></i> Generar Factura
-						</a>
+						<br>
+						<li>
+							<!--Implementacion del boton factura en la venta-->
+							<a href="<?= site_url("billing/facturar/$sale_id_raw") ?>" class="btn btn-primary">
+								<i class="fa fa-file-invoice"></i> Generar Factura
+							</a>
 
-								</li>
-						
+						</li>
+
 					</ul>
 				</div>
 			</div>
