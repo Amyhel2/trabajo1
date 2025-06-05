@@ -1,6 +1,3 @@
-<?php $this->load->view('partial/header', $datos_usuario);?>
-
-<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
 
 <div class="container-fluid">
   <div class="row mt-3">
@@ -928,4 +925,4 @@
   date_time_picker_field($("#expire_date"), JS_DATE_FORMAT);
 </script>
 
-<?php $this->load->view("partial/footer"); ?>
+

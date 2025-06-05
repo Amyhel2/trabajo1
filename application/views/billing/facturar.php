@@ -1,6 +1,4 @@
-<?php $this->load->view('partial/header', $datos_usuario);?>
 
-<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
 
 <div class="container-fluid">
   <h4 class="mb-0">
@@ -18,7 +16,7 @@
                 <ul class="list-inline">
                   <li>
                     <span role="status" aria-live="polite" class="ui-helper-hidden-accessible"></span>
-                    <input type="text" id="search" class="form-control ui-autocomplete-input" name="search" id="search" placeholder="Ingrese código del producto" autocomplete="off">
+                    <input type="text" id="search" class="form-control ui-autocomplete-input" name="search" placeholder="Ingrese código del producto" autocomplete="off">
                   </li>
                   <li>
                     <button type="button" id="btn-search" class="btn btn-primary">
@@ -40,8 +38,7 @@
                 <ul class="list-inline">
                   <li>
                     <span role="status" aria-live="polite" class="ui-helper-hidden-accessible"></span>
-                    <input type="text" id="nit" class="form-control" value="<?= htmlspecialchars($nit) ?>" required name="search" id="search" placeholder="Introdusca nit o razon social" autocomplete="off">
-
+                    <input type="text" id="nit" class="form-control" value="<?= htmlspecialchars($nit) ?>" required placeholder="Introdusca nit o razon social" autocomplete="off">
                   </li>
                   <li>
                     <button type="button" id="btn-search" class="btn btn-primary">
@@ -139,6 +136,7 @@
     </div>
   </form>
 </div>
+
 <?php $this->load->view("partial/footer"); ?>
 
 <script>

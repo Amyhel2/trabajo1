@@ -1,9 +1,7 @@
-<?php $this->load->view('partial/header', $datos_usuario);?>
 
-<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
 
 <div class="container-fluid">
-     <!-- Mensajes de éxito / error (Bootstrap 3) -->
+  <!-- Mensajes de éxito / error (Bootstrap 3) -->
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible" role="alert">
       <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
@@ -23,10 +21,10 @@
       <?= $this->session->flashdata('error') ?>
     </div>
   <?php endif; ?>
+
   <!-- Formulario de Búsqueda -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
-
       <form method="post" action="<?= site_url('billing/index') ?>" class="row g-3">
         <div class="col-md-3">
           <label>Fecha Inicio:</label>
@@ -45,6 +43,7 @@
     </div>
   </div>
   <br>
+
   <!-- Tabla de Resultados -->
   <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">
@@ -70,23 +69,24 @@
               <?php foreach ($facturas as $i => $f): ?>
                 <tr>
                   <td><?= $i + 1 ?></td>
-                  <td><?= "{$f['fecha']} {$f['hora']}" ?></td>
-                  <td><?= $f['numeroFactura'] ?></td>
-                  <td><?= $f['numeroDocumento'] ?></td>
-                  <td><?= $f['nombreRazonSocial'] ?></td>
+                  <td><?= htmlspecialchars("{$f['fecha']} {$f['hora']}") ?></td>
+                  <td><?= htmlspecialchars($f['numeroFactura']) ?></td>
+                  <td><?= htmlspecialchars($f['numeroDocumento']) ?></td>
+                  <td><?= htmlspecialchars($f['nombreRazonSocial']) ?></td>
                   <td><?= number_format($f['montoTotalSujetoIva'], 2, ',', '.') ?></td>
                   <td>
                     <span class="badge bg-<?= $f['estado'] === 'VALIDO' ? 'success' : 'dangerbb' ?>">
-                      <?= $f['estado'] ?>
+                      <?= htmlspecialchars($f['estado']) ?>
                     </span>
                   </td>
                   <td>
                     <div class="btn-group" role="group">
                       <!-- Ver PDF -->
-                      <a href="<?= site_url("billing/ver_pdf/{$f['id']}") ?>"
-                         class="btn btn-sm btn-success" title="Ver PDF">
-                        <i class="fa fa-file-pdf"></i> PDF
-                      </a>
+                      <a href="<?= site_url("billing/ver_factura/{$f['id']}") ?>"
+   class="btn btn-sm btn-info" title="Ver en SIAT" target="_blank">
+  <i class="fa fa-external-link-alt"></i> Ver SIAT
+</a>
+
                       <!-- Enviar Email -->
                       <?php if (!empty($f['email'])): ?>
                         <a href="<?= site_url("billing/enviar_email/{$f['id']}") ?>"
@@ -131,4 +131,3 @@ function confirmarAnulacion(id) {
 }
 </script>
 
-<?php $this->load->view("partial/footer"); ?>

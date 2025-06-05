@@ -27,27 +27,83 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
+    /**
+     * _datos_usuario()
+     * - Lee person_id de sesión.
+     * - Hace JOIN para traer: first_name, last_name, sucursal_id, nombre_sucursal, nombre_punto_venta, nro_punto_venta.
+     * - Devuelve un array con esas claves. Si no hay sesión o relación, devuelve valores por defecto (incluyendo sucursal_id = null).
+     */
+    private function _datos_usuario()
+    {
+        // 1) Leer el ID del empleado desde sesión
+        $employee_id = $this->session->userdata('person_id');
+        if (!$employee_id) {
+            return [
+                'sucursal_id'       => null,
+                'nombre_empleado'   => 'Desconocido',
+                'nombre_sucursal'   => 'No asignada',
+                'nombre_punto_venta' => 'No asignado',
+                'nro_punto_venta'   => '-'
+            ];
+        }
+
+        // 2) Hacer la consulta JOIN para traer datos + sucursal_id
+        $this->db->select('
+        people.first_name,
+        people.last_name,
+        suc.id               AS sucursal_id,
+        suc.nombre           AS nombre_sucursal,
+        punto.nombre         AS nombre_punto_venta,
+        punto.nro_punto_venta
+    ');
+        $this->db->from('phppos_people AS people');
+        $this->db->join('phppos_sucursal_empleado AS rel', 'people.person_id = rel.employee_id');
+        $this->db->join('phppos_sucursales_siat AS suc', 'suc.id = rel.sucursal_id');
+        $this->db->join('phppos_puntos_venta_siat AS punto', 'punto.id_sucursal = suc.id');
+        $this->db->where('people.person_id', $employee_id);
+        $this->db->limit(1);
+        $row = $this->db->get()->row();
+
+        if ($row) {
+            return [
+                'sucursal_id'       => $row->sucursal_id,
+                'nombre_empleado'   => trim($row->first_name . ' ' . $row->last_name),
+                'nombre_sucursal'   => $row->nombre_sucursal,
+                'nombre_punto_venta' => $row->nombre_punto_venta,
+                'nro_punto_venta'   => $row->nro_punto_venta
+            ];
+        } else {
+            return [
+                'sucursal_id'       => null,
+                'nombre_empleado'   => 'Desconocido',
+                'nombre_sucursal'   => 'No asignada',
+                'nombre_punto_venta' => 'No asignado',
+                'nro_punto_venta'   => '-'
+            ];
+        }
+    }
+
     // Listado de facturas
     public function index()
-{
-    $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
-    $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
+    {
+        $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
+        $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
 
-    if ($inicio > $fin) {
-    $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
-    redirect('billing/index');
-}
+        if ($inicio > $fin) {
+            $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
+            redirect('billing/index');
+        }
 
-// Obtener el ID del empleado logueado desde sesión
-$employee_id = $this->session->userdata('person_id');
+        // Obtener el ID del empleado logueado desde sesión
+        $employee_id = $this->session->userdata('person_id');
 
-if (!$employee_id) {
-    $this->session->set_flashdata('error', 'Empleado no identificado.');
-    redirect('login');
-}
+        if (!$employee_id) {
+            $this->session->set_flashdata('error', 'Empleado no identificado.');
+            redirect('login');
+        }
 
-// Consultar los datos del empleado, sucursal y punto de venta
-$this->db->select('
+        // Consultar los datos del empleado, sucursal y punto de venta
+        $this->db->select('
     people.first_name,
     people.last_name,
     suc.id AS sucursal_id,
@@ -55,132 +111,158 @@ $this->db->select('
     punto.nombre AS nombre_punto_venta,
     punto.nro_punto_venta
 ');
-$this->db->from('phppos_people AS people');
-$this->db->join('phppos_sucursal_empleado AS rel', 'people.person_id = rel.employee_id');
-$this->db->join('phppos_sucursales_siat AS suc', 'suc.id = rel.sucursal_id');
-$this->db->join('phppos_puntos_venta_siat AS punto', 'punto.id_sucursal = suc.id');
-$this->db->where('people.person_id', $employee_id);
-$this->db->limit(1);
-$row = $this->db->get()->row();
+        $this->db->from('phppos_people AS people');
+        $this->db->join('phppos_sucursal_empleado AS rel', 'people.person_id = rel.employee_id');
+        $this->db->join('phppos_sucursales_siat AS suc', 'suc.id = rel.sucursal_id');
+        $this->db->join('phppos_puntos_venta_siat AS punto', 'punto.id_sucursal = suc.id');
+        $this->db->where('people.person_id', $employee_id);
+        $this->db->limit(2);
+        $row = $this->db->get()->row();
 
-if (!$row) {
-    $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
-    $this->load->view('partial/header');
-    $this->load->view('billing/index', [
-        'facturas'    => [],
-        'fechainicio' => $inicio,
-        'fechafin'    => $fin
-    ]);
-    return;
-}
+        if (!$row) {
+            $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
+            $this->load->view('partial/header');
+            $this->load->view('billing/index', [
+                'facturas'    => [],
+                'fechainicio' => $inicio,
+                'fechafin'    => $fin
+            ]);
+            return;
+        }
 
-$datos_usuario = [
-    'nombre_empleado'    => trim($row->first_name . ' ' . $row->last_name),
-    'nombre_sucursal'    => $row->nombre_sucursal,
-    'nombre_punto_venta' => $row->nombre_punto_venta,
-    'nro_punto_venta'    => $row->nro_punto_venta
-];
+        $datos_usuario = [
+            'nombre_empleado'    => trim($row->first_name . ' ' . $row->last_name),
+            'nombre_sucursal'    => $row->nombre_sucursal,
+            'nombre_punto_venta' => $row->nombre_punto_venta,
+            'nro_punto_venta'    => $row->nro_punto_venta
+        ];
 
-$sucursal_id = $row->sucursal_id;
+        $sucursal_id = $row->sucursal_id;
 
-// Llamar a la API con sucursal dinámica
-$resp = $this->call_api([
-    'funcion'     => 'listarFacturas',
-    'ids'         => $sucursal_id,
-    'fechainicio' => $inicio,
-    'fechafin'    => $fin
-]);
+        // Llamar a la API con sucursal dinámica
+        $resp = $this->call_api([
+            'funcion'     => 'listarFacturas',
+            'ids'         => $sucursal_id,
+            'fechainicio' => $inicio,
+            'fechafin'    => $fin
+        ]);
 
-$facturas = [];
-if (isset($resp['facturas'])) {
-    $facturas = $resp['facturas'];
-} else {
-    $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
-}
+        $facturas = [];
+        if (isset($resp['facturas'])) {
+            $facturas = $resp['facturas'];
+        } else {
+            $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
+        }
+
+        $this->load->view('partial/header');
+        // 4) Cargar el header de facturación con datos del usuario
+        $this->load->view('partial/header_facturacion', $datos_usuario);
 
 
-$this->load->view('billing/index', [
-    'facturas'        => $facturas,
-    'fechainicio'     => $inicio,
-    'fechafin'        => $fin,
-    'datos_usuario'   => $datos_usuario
-]);
-
-}
+        $this->load->view('billing/index', [
+            'facturas'        => $facturas,
+            'fechainicio'     => $inicio,
+            'fechafin'        => $fin,
+            'datos_usuario'   => $datos_usuario
+        ]);
+        // 6) Cargar el footer
+        $this->load->view('partial/footer');
+    }
 
 
     // Ver / Descargar PDF
-    public function ver_pdf($idfac = null)
+    public function ver_factura($idfac = null)
     {
         if (!$idfac) {
             $this->session->set_flashdata('error', 'Factura no identificada');
             redirect('billing/index');
+            return;
         }
 
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
 
-        $pdfOk = $this->call_api([
-            'funcion' => 'generarFacturaPdf',
-            'idfac'   => $idfac
-        ]);
-
-        if (empty($pdfOk) || $pdfOk === false) {
-            $this->session->set_flashdata('error', 'No se pudo generar el PDF');
-            redirect('billing/index');
-        }
-
-
-        $detalle = $this->call_api([
-            'funcion' => 'listarFacturas',
-            'ids'     => '1',                           // se debe implementar un usuario dinamico
-            'fechainicio' => date('Y-m-d'),
+        // Buscar la factura por ID
+        $resp = $this->call_api([
+            'funcion'     => 'listarFacturas',
+            'ids'         => $sucursal_id,
+            'fechainicio' => '2000-01-01',
             'fechafin'    => date('Y-m-d')
         ]);
 
         $factura = null;
-        foreach ($detalle['facturas'] ?? [] as $f) {
-            if ($f['id'] == $idfac) {
+        foreach ($resp['facturas'] ?? [] as $f) {
+            if ((string)$f['id'] === (string)$idfac) {
                 $factura = $f;
                 break;
             }
         }
+
         if (!$factura || empty($factura['cuf'])) {
             $this->session->set_flashdata('error', 'No se encontró CUF para la factura');
             redirect('billing/index');
+            return;
         }
 
-        $path = FCPATH . "Siat/temp/factura-{$factura['cuf']}.pdf";
-        if (!file_exists($path)) {
-            $this->session->set_flashdata('error', 'Archivo PDF no encontrado');
-            redirect('billing/index');
-        }
+        // Construir URL del visor del SIAT
+        $url = "https://siat.impuestos.gob.bo/consulta/QR?" . http_build_query([
+            'nit'           => $factura['nitEmisor'],
+            'cuf'           => $factura['cuf'],
+            'numero'        => $factura['numeroFactura'],
+            'fechaEmision'  => $factura['fecha'],
+            'cajero'        => '1'
+        ]);
 
-        header('Content-Type: application/pdf');
-        readfile($path);
-        exit;
+        redirect($url);
     }
 
-    public function enviar_email($idfac)
-    {
 
+    public function enviar_email($idfac = null)
+    {
+        if (!$idfac) {
+            $this->session->set_flashdata('error', 'Factura no identificada');
+            redirect('billing/index');
+            return;
+        }
+
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+
+        // Buscar la factura específica con un rango amplio
         $resp = $this->call_api([
-            'funcion' => 'listarFacturas',
-            'ids'     => '1',
-            'fechainicio' => date('Y-m-d'),
+            'funcion'     => 'listarFacturas',
+            'ids'         => $sucursal_id,
+            'fechainicio' => '2000-01-01',
             'fechafin'    => date('Y-m-d')
         ]);
+
         $factura = null;
         foreach ($resp['facturas'] ?? [] as $f) {
-            if ($f['id'] == $idfac) {
+            if ((string)$f['id'] === (string)$idfac) {
                 $factura = $f;
                 break;
             }
         }
 
-        if (!$factura || empty($factura['email'])) {
-            $this->session->set_flashdata('error', 'No hay correo electrónico disponible para esta factura');
+        if (!$factura) {
+            $this->session->set_flashdata('error', 'Factura no encontrada');
             redirect('billing/index');
+            return;
         }
 
+        if (empty($factura['email'])) {
+            $this->session->set_flashdata('error', 'No hay correo electrónico disponible para esta factura');
+            redirect('billing/index');
+            return;
+        }
+
+        if (empty($factura['cuf'])) {
+            $this->session->set_flashdata('error', 'La factura no tiene CUF');
+            redirect('billing/index');
+            return;
+        }
+
+        // Llamar a la API para enviar el correo
         $res = $this->call_api([
             'funcion' => 'enviarMailFactura',
             'mail'    => $factura['email'],
@@ -188,29 +270,46 @@ $this->load->view('billing/index', [
             'nit'     => $factura['numeroDocumento'],
             'cuf'     => $factura['cuf']
         ]);
-        if (isset($res['correo'])) {
+
+        if (!empty($res['correo'])) {
             $this->session->set_flashdata('success', 'Factura enviada por email');
         } else {
-            $this->session->set_flashdata('error', $res['error'] ?? 'Error al enviar email');
+            $this->session->set_flashdata('error', $res['error'] ?? 'No se pudo enviar el correo');
         }
 
         redirect('billing/index');
     }
 
+
+
+
     // Anular Factura
-    public function anular_factura($idfac)
+
+    public function anular_factura($idfac = null)
     {
-        $res = $this->call_api([
+        if (!$idfac) {
+            $this->session->set_flashdata('error', 'Factura no identificada');
+            redirect('billing/index');
+            return;
+        }
+
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+
+
+        $resp = $this->call_api([
             'funcion' => 'anularFactura',
-            'ids'     => '1',
+            'ids'     => 1, // aqui la funcion debe de actuar de manera dinámica
             'idf'     => $idfac,
             'motivo'  => '1'
         ]);
-        if (!empty($res) && ($res === true || isset($res['res']) && $res['res'] === true)) {
-            $this->session->set_flashdata('success', 'Factura anulada correctamente');
+
+        if (!empty($resp) && (isset($resp['res']) && $resp['res'] === true)) {
+            $this->session->set_flashdata('success', 'Factura anulada correctamente puede descargar el PDF de anulación');
         } else {
-            $this->session->set_flashdata('error', $res['error'] ?? 'Error al anular factura');
+            $this->session->set_flashdata('error', $resp['error'] ?? 'No se pudo anular la factura porque no se obtuvieron datos de la API');
         }
+
         redirect('billing/index');
     }
     ////
@@ -218,7 +317,11 @@ $this->load->view('billing/index', [
     // FACTURAR
     public function facturar($sale_id = null)
     {
+
+        $datos_usuario = $this->_datos_usuario();
+
         $this->load->model(['Item', 'Sale']);
+
 
         $productos = $this->Item->get_all();
         $razon_social = '';
@@ -228,6 +331,7 @@ $this->load->view('billing/index', [
         $subtotal = 0.00;
         $descuento_total = 0.00;
         $total = 0.00;
+
 
         if ($sale_id) {
             $venta = $this->Sale->get_detalle_venta_completo($sale_id);
@@ -251,27 +355,32 @@ $this->load->view('billing/index', [
                 $descuento_total += $m_desc + $neg_subt;
 
                 $facturas[] = [
-                    'codigo' => $p->item_id,
-                    'cantidad' => (float)$p->quantity_purchased,
-                    'descripcion' => $p->item_nombre,
+                    'codigo'        => $p->item_id,
+                    'cantidad'      => (float)$p->quantity_purchased,
+                    'descripcion'   => $p->item_nombre,
                     'preciounitario' => (float)$p->item_unit_price,
-                    'descuento' => (float)$p->discount_percent,
-                    'subtotal' => (float)$p->item_subtotal,
+                    'descuento'     => (float)$p->discount_percent,
+                    'subtotal'      => (float)$p->item_subtotal,
                 ];
             }
         }
 
+        $this->load->view('partial/header');
+        $this->load->view('partial/header_facturacion', $datos_usuario);
+        // 6) Cargar la vista 'billing/facturar' con los datos de la venta
         $this->load->view('billing/facturar', [
             'razon_social' => $razon_social,
-            'nit' => $nit,
-            'email' => $email,
-            'facturas' => $facturas,
-            'subtotal' => $subtotal,
-            'descuento' => $descuento_total,
-            'total' => $total,
-            'productos' => $productos
+            'nit'          => $nit,
+            'email'        => $email,
+            'facturas'     => $facturas,
+            'subtotal'     => $subtotal,
+            'descuento'    => $descuento_total,
+            'total'        => $total,
+            'productos'    => $productos
         ]);
+        $this->load->view('partial/footer');
     }
+
 
     public function procesar_factura()
     {
@@ -299,28 +408,46 @@ $this->load->view('billing/index', [
     // CODIGOS
     public function codigos()
     {
+        // 1) Obtener datos del usuario (incluye sucursal_id)
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+
+        // 2) Primero, traer los CUFDs locales de tu modelo
         $cufdsLocal = $this->Cufd_model->obtener_todos();
         if (empty($cufdsLocal)) {
-            $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+            // Si no hay registros locales, llamar a la API para listar
+            $resp = $this->call_api([
+                'funcion' => 'listarCodigos',
+                'ids'     => $sucursal_id
+            ]);
             $cufdsLocal = $resp['cufds']['data'] ?? [];
         }
 
-        //ACA SE ESTA LLAMANDO A LA FUNCION DE LA API
-        $resp2 = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
+        // 3) Luego, siempre llamar a la API para obtener los CUIS
+        $resp2 = $this->call_api([
+            'funcion' => 'listarCodigos',
+            'ids'     => $sucursal_id
+        ]);
         $cuis = $resp2['cuiss']['data'] ?? [];
 
+        $this->load->view('partial/header');
+        // 4) Cargar el header de facturación con datos del usuario
+        $this->load->view('partial/header_facturacion', $datos_usuario);
+
+        // 5) Cargar la vista específica “billing/codigos” con los datos necesarios
         $this->load->view('billing/codigos', [
             'cufds' => $cufdsLocal,
             'cuis'  => $cuis
         ]);
+
+        // 6) Cargar el footer
+        $this->load->view('partial/footer');
     }
 
     public function sincronizar_cufd()
     {
 
         $this->call_api(['funcion' => 'sincronizarCufd', 'ids' => '1']);
-
-
         $resp = $this->call_api(['funcion' => 'listarCodigos', 'ids' => '1']);
         $cufdsApi = $resp['cufds']['data'] ?? [];
 
@@ -353,29 +480,106 @@ $this->load->view('billing/index', [
     ////
 
     // CONFIGURACION
-    public function configuracion()
+   
+/////
+
+public function configuracion()
     {
-        $this->load->model('Appconfig');
-        $company_name = $this->Appconfig->get_company_name();
+    
+        $datos_usuario = $this->_datos_usuario();
 
-        $data['company_name'] = $company_name;
+        $respuesta = $this->call_api([
+            'funcion' => 'configuracionSiat'
+        ]);
 
+        $config = $respuesta['configuracion'] ?? [];
+
+        // 3) Pasar a la vista
+        $data = [
+            'config'       => $config,
+            'company_name' => $config['razonSocial'] ?? ''
+        ];
+
+        // 4) Cargar vistas
+        $this->load->view('partial/header', $datos_usuario);
+        $this->load->view('partial/header_facturacion', $datos_usuario);
         $this->load->view('billing/configuracion', $data);
+        $this->load->view('partial/footer');
     }
 
-    public function editarConfiguracion()
+
+     public function editarConfiguracion()
     {
-        $this->load->view('billing/editarConfiguracion');
+        // 1) Obtener datos del usuario
+        $datos_usuario = $this->_datos_usuario();
+
+        // 2) Obtener la configuración actual de la API
+        $respuesta = $this->call_api([
+            'funcion' => 'configuracionSiat'
+        ]);
+
+        $config = $respuesta['configuracion'] ?? [];
+
+        // 3) Enviar a la vista de edición
+        $this->load->view('partial/header', $datos_usuario);
+        $this->load->view('partial/header_facturacion', $datos_usuario);
+        $this->load->view('billing/editarConfiguracion', [
+            'config' => $config
+        ]);
+        $this->load->view('partial/footer');
     }
+
+
     public function guardarConfiguracion()
     {
+    
+        $post = $this->input->post();
+
+        
+        $params = [
+            'funcion'            => 'updConfiguracion',
+            'nomsistema'         => $post['nomsistema']         ?? '',
+            'codsistema'         => $post['codsistema']         ?? '',
+            'rzssistema'         => $post['rzssistema']         ?? '',
+            'nitsistema'         => $post['nitsistema']         ?? '',
+            'modsistema'         => $post['modsistema']         ?? '',
+            'cafcsistema'        => $post['cafcsistema']        ?? '',
+            'monsistema'         => $post['monsistema']         ?? '',
+            'docsectorsistema'   => $post['docsectorsistema']   ?? '',
+            'facsistema'         => $post['facsistema']         ?? '',
+            'toksistema'         => $post['toksistema']         ?? '',
+            'metsistema'         => $post['metsistema']         ?? '',
+            'ciusistema'         => $post['ciusistema']         ?? '',
+            'telsistema'         => $post['telsistema']         ?? '',
+            'impsistema'         => $post['impsistema']         ?? '',
+            'ambsistema'         => $post['ambsistema']         ?? '',
+            'inicafcsistema'     => $post['inicafcsistema']     ?? '',
+            'fincafcsistema'     => $post['fincafcsistema']     ?? '',
+            'pubsistema'         => $post['pubsistema']         ?? '',
+            'privsistema'        => $post['privsistema']        ?? '',
+            'emailsistema'       => $post['emailsistema']       ?? '',
+            'pwdemailsistema'    => $post['pwdemailsistema']    ?? '',
+            'smtpemailsistema'   => $post['smtpemailsistema']   ?? ''
+        ];
+
+        $resp = $this->call_api($params);
+
+        if (!empty($resp['success']) && $resp['success'] === true) {
+            $this->session->set_flashdata('success', 'Configuración guardada correctamente.');
+        } else {
+            $this->session->set_flashdata('error', $resp['error'] ?? 'No se pudo guardar la configuración.');
+        }
+
         redirect('billing/configuracion');
     }
+    
     ////
 
     // SUCURSALES
     public function sucursales()
     {
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
 
         $respSuc      = $this->call_api(['funcion' => 'listarSucursales']);
         $sucursalesApi = $respSuc['sucursales']['data'] ?? [];
@@ -389,7 +593,6 @@ $this->load->view('billing/index', [
                 'celular'         => $s['celularSucursal'],
             ]);
         }
-
 
         $respPdv = $this->call_api(['funcion' => 'listarPos']);
         $posApi  = $respPdv['pos']['data'] ?? [];
@@ -410,16 +613,20 @@ $this->load->view('billing/index', [
             ]);
         }
 
-
         $sucursales  = $this->Sucursal_model->obtener_todas();
         $puntosVenta = $this->PuntoVenta_model->obtener_todos();
 
+        $this->load->view('partial/header');
+        $this->load->view('partial/header_facturacion', $datos_usuario);
 
         $this->load->view('billing/sucursales', [
             'sucursales'  => $sucursales,
             'puntosVenta' => $puntosVenta
         ]);
+        $this->load->view('partial/footer');
     }
+
+
     public function sincronizar_sucursales()
     {
         $this->call_api(['funcion' => 'listarSucursales']);
@@ -589,9 +796,19 @@ $this->load->view('billing/index', [
 
     // SINCRONIZACION
     public function sincronizacion()
+
     {
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+        $this->load->view('partial/header');
+        $this->load->view('partial/header_facturacion', $datos_usuario);
+
         $this->load->view('billing/sincronizacion');
+
+        $this->load->view('partial/footer');
     }
+
+
     public function sincronizar()
     {
         $resp = $this->call_api(['funcion' => 'sincronizarActividades', 'codigo' => '123456']);
@@ -604,9 +821,27 @@ $this->load->view('billing/index', [
     // EVENTOS
     public function eventos()
     {
-        $resp = $this->call_api(['funcion' => 'listarEventos', 'ids' => '1']);
-        $this->load->view('billing/eventos', ['eventos' => $resp['eventos']['data'] ?? []]);
+
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+
+
+        $resp = $this->call_api([
+            'funcion' => 'listarEventos',
+            'ids'     => $sucursal_id
+        ]);
+
+        $this->load->view('partial/header');
+        $this->load->view('partial/header_facturacion', $datos_usuario);
+
+        $this->load->view('billing/eventos', [
+            'eventos' => $resp['eventos']['data'] ?? []
+        ]);
+
+        $this->load->view('partial/footer');
     }
+
+
     public function nuevoEvento()
     {
         $resp = $this->call_api(['funcion' => 'listarPos']);
@@ -621,7 +856,7 @@ $this->load->view('billing/index', [
         redirect('billing/eventos');
     }
 
-    //FUNCION DE LLAMADA PRINCIPAL A LA API
+    //FUNCION DE LLAMADA PRINCIPAL A LA API DE FACTURACION
     private function call_api(array $params)
     {
         $ch = curl_init($this->api_url);
@@ -649,6 +884,7 @@ $this->load->view('billing/index', [
 
     public function sincroizacion()
     {
+
         $this->load->view('billing/sincronizarGeneral');
     }
 
@@ -733,70 +969,60 @@ $this->load->view('billing/index', [
 
     //Funcion para ventas sin factura 
     public function sales_without_invoice()
-{
-    // Default date range: first day of current month 00:00:00 to today 23:59:59
-    $default_start = date('Y-m-01') . ' 00:00:00';
-    $default_end   = date('Y-m-d') . ' 23:59:59';
+    {
+        // Default date range: first day of current month 00:00:00 to today 23:59:59
+        $default_start = date('Y-m-01') . ' 00:00:00';
+        $default_end   = date('Y-m-d') . ' 23:59:59';
 
-    // Initialize sales array empty
-    $sales = [];
+        // Initialize sales array empty
+        $sales = [];
 
-    // Prepare start_date and end_date for the view (always use defaults if GET not present)
-    $start_date = $this->input->get('start_date')
-        ? $this->input->get('start_date') . ' 00:00:00'
-        : $default_start;
-    $end_date = $this->input->get('end_date')
-        ? $this->input->get('end_date') . ' 23:59:59'
-        : $default_end;
+        // Prepare start_date and end_date for the view (always use defaults if GET not present)
+        $start_date = $this->input->get('start_date')
+            ? $this->input->get('start_date') . ' 00:00:00'
+            : $default_start;
+        $end_date = $this->input->get('end_date')
+            ? $this->input->get('end_date') . ' 23:59:59'
+            : $default_end;
 
-    // Only fetch data if the user has submitted the date filters
-    if ($this->input->get('start_date') && $this->input->get('end_date')) {
-        $this->load->model('Billing_model');
-        $sales = $this->Billing_model->get_sales_without_invoice($start_date, $end_date);
+        // Only fetch data if the user has submitted the date filters
+        if ($this->input->get('start_date') && $this->input->get('end_date')) {
+            $this->load->model('Billing_model');
+            $sales = $this->Billing_model->get_sales_without_invoice($start_date, $end_date);
+        }
+
+        // Pass data to the view
+        $this->load->view('billing/sales_without_invoice', [
+            'sales'      => $sales,
+            'start_date' => $start_date,
+            'end_date'   => $end_date
+        ]);
     }
 
-    // Pass data to the view
-    $this->load->view('billing/sales_without_invoice', [
-        'sales'      => $sales,
-        'start_date' => $start_date,
-        'end_date'   => $end_date
-    ]);
-}
+    public function sales_with_invoice()
+    {
+        $default_start = date('Y-m-01') . ' 00:00:00';
+        $default_end   = date('Y-m-d') . ' 23:59:59';
 
-public function sales_with_invoice()
-{
-    // Default date range: first day of current month 00:00:00 to today 23:59:59
-    $default_start = date('Y-m-01') . ' 00:00:00';
-    $default_end   = date('Y-m-d') . ' 23:59:59';
+        $sales = [];
 
-    // Initialize sales array empty
-    $sales = [];
+        $start_date = $this->input->get('start_date')
+            ? $this->input->get('start_date') . ' 00:00:00'
+            : $default_start;
+        $end_date = $this->input->get('end_date')
+            ? $this->input->get('end_date') . ' 23:59:59'
+            : $default_end;
 
-    // Prepare start_date and end_date for the view
-    $start_date = $this->input->get('start_date')
-        ? $this->input->get('start_date') . ' 00:00:00'
-        : $default_start;
-    $end_date = $this->input->get('end_date')
-        ? $this->input->get('end_date') . ' 23:59:59'
-        : $default_end;
+        if ($this->input->get('start_date') && $this->input->get('end_date')) {
+            $this->load->model('Billing_model');
+            $sales = $this->Billing_model->get_sales_with_invoice($start_date, $end_date);
+        }
 
-    // Only fetch data if filters are set
-    if ($this->input->get('start_date') && $this->input->get('end_date')) {
-        $this->load->model('Billing_model');
-        $sales = $this->Billing_model->get_sales_with_invoice($start_date, $end_date);
+        $this->load->view('billing/sales_with_invoice', [
+            'sales'      => $sales,
+            'start_date' => $start_date,
+            'end_date'   => $end_date
+        ]);
     }
-
-    // Pass to view
-    $this->load->view('billing/sales_with_invoice', [
-        'sales'      => $sales,
-        'start_date' => $start_date,
-        'end_date'   => $end_date
-    ]);
-}
-public function test(){
-    $this->load->view('billing/test');
-}
-
-    
     
 }

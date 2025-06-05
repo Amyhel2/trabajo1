@@ -1,6 +1,4 @@
-<?php $this->load->view('partial/header', $datos_usuario);?>
 
-<?php $this->load->view('partial/header_facturacion', $datos_usuario);?>
 
 <div class="container-fluid mt-4">
   <!-- Mensajes de éxito/error -->
@@ -69,4 +67,3 @@
   </div>
 </div>
 
-<?php $this->load->view("partial/footer"); ?>
