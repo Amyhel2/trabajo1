@@ -6,9 +6,10 @@
           <i class="fa fa-cogs text-primary"></i> Configuración SIAT
         </h4>
       </div>
-      <div class="col-md-4 text-end">
+      <div class="col-md-4 text-end text-right">
         <button type="submit" class="btn btn-success btn-lg">
-          <i class="fa fa-save"></i> Editar
+          <i class="fa fa-save"></i> 
+          <span class="ion-edit"> </span> Editar
         </button>
       </div>
     </div>
@@ -36,7 +37,7 @@
             <input type="text" class="form-control" name="razonSocial" value="<?= $config['razonSocial'] ?? '' ?>" readonly>
           </div>
           <div class="col-md-4">
-            <label >Modalidad:</label>
+            <label>Modalidad:</label>
             <select class="form-control" name="modalidad" disabled>
               <option value="1" <?= isset($config['modalidad']) && $config['modalidad'] == 1 ? 'selected' : '' ?>>Electrónica en línea</option>
               <option value="2" <?= isset($config['modalidad']) && $config['modalidad'] == 2 ? 'selected' : '' ?>>Computarizada en línea</option>
@@ -55,8 +56,8 @@
           <div class="col-md-4">
             <label>Tipo Factura:</label>
             <select class="form-control" name="tipoFactura" disabled>
-              <option value="1" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 1 ? 'selected' : '' ?>>Con derecho a crédito fiscal</option>
-              <option value="2" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 2 ? 'selected' : '' ?>>Sin derecho</option>
+              <option value="1" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 1 ? 'selected' : '' ?>>Factura con derecho a crédito fiscal</option>
+              <option value="2" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 2 ? 'selected' : '' ?>>Factura sin derecho a crédito fiscal</option>
               <option value="3" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 3 ? 'selected' : '' ?>>Documento de ajuste</option>
               <option value="4" <?= isset($config['tipoFactura']) && $config['tipoFactura'] == 4 ? 'selected' : '' ?>>Documento equivalente</option>
             </select>
@@ -64,11 +65,11 @@
           <div class="col-md-4">
             <label>Tipo Documento Sector:</label>
             <select class="form-control" name="tipoDocumentoSector" disabled>
-              <option value="1" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 1 ? 'selected' : '' ?>>Compra-Venta</option>
-              <option value="2" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 2 ? 'selected' : '' ?>>Alquiler</option>
-              <option value="3" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 3 ? 'selected' : '' ?>>Hospitales</option>
+              <option value="1" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 1 ? 'selected' : '' ?>>Factura Compra-Venta</option>
+              <option value="2" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 2 ? 'selected' : '' ?>>Factura de Alquiler de Bienes Inmuebles</option>
+              <option value="3" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 3 ? 'selected' : '' ?>>Factura de Hospitales/Clínicas</option>
               <option value="4" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 4 ? 'selected' : '' ?>>Servicios básicos</option>
-              <option value="5" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 5 ? 'selected' : '' ?>>Educación</option>
+              <option value="5" <?= isset($config['tipoDocumentoSector']) && $config['tipoDocumentoSector'] == 5 ? 'selected' : '' ?>>Sector Educativo </option>
             </select>
           </div>
           <div class="col-md-4">
@@ -100,7 +101,7 @@
             <label>Tipo Impresión:</label>
             <select class="form-control" name="tipoImpresion" disabled>
               <option value="1" <?= isset($config['tipoImpresion']) && $config['tipoImpresion'] == 1 ? 'selected' : '' ?>>Media Página</option>
-              <option value="2" <?= isset($config['tipoImpresion']) && $config['tipoImpresion'] == 2 ? 'selected' : '' ?>>Ticket</option>
+              <option value="2" <?= isset($config['tipoImpresion']) && $config['tipoImpresion'] == 2 ? 'selected' : '' ?>>Ticket/Rollo</option>
             </select>
           </div>
         </div>

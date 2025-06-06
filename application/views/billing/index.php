@@ -82,7 +82,7 @@
                   <td>
                     <div class="btn-group" role="group">
                       <!-- Ver PDF -->
-                      <a href="<?= site_url("billing/ver_factura/{$f['id']}") ?>"
+                      <a href="<?= site_url("billing/ver_en_siat/{$f['id']}") ?>"
    class="btn btn-sm btn-info" title="Ver en SIAT" target="_blank">
   <i class="fa fa-external-link-alt"></i> Ver SIAT
 </a>

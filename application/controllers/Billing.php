@@ -27,15 +27,9 @@ class Billing extends Secure_area
         $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
 
-    /**
-     * _datos_usuario()
-     * - Lee person_id de sesión.
-     * - Hace JOIN para traer: first_name, last_name, sucursal_id, nombre_sucursal, nombre_punto_venta, nro_punto_venta.
-     * - Devuelve un array con esas claves. Si no hay sesión o relación, devuelve valores por defecto (incluyendo sucursal_id = null).
-     */
     private function _datos_usuario()
     {
-        // 1) Leer el ID del empleado desde sesión
+       
         $employee_id = $this->session->userdata('person_id');
         if (!$employee_id) {
             return [
@@ -47,7 +41,6 @@ class Billing extends Secure_area
             ];
         }
 
-        // 2) Hacer la consulta JOIN para traer datos + sucursal_id
         $this->db->select('
         people.first_name,
         people.last_name,
@@ -86,60 +79,38 @@ class Billing extends Secure_area
     // Listado de facturas
     public function index()
     {
+        // 1) Leer fechas de búsqueda (si no vienen, valores por defecto)
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
 
+        // Validar rango de fechas
         if ($inicio > $fin) {
             $this->session->set_flashdata('error', 'La fecha inicial no puede ser mayor a la final');
             redirect('billing/index');
         }
 
-        // Obtener el ID del empleado logueado desde sesión
-        $employee_id = $this->session->userdata('person_id');
+        // 2) Obtener datos del usuario (empleado, sucursal, punto de venta) con el método privado
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
 
-        if (!$employee_id) {
-            $this->session->set_flashdata('error', 'Empleado no identificado.');
-            redirect('login');
-        }
-
-        // Consultar los datos del empleado, sucursal y punto de venta
-        $this->db->select('
-    people.first_name,
-    people.last_name,
-    suc.id AS sucursal_id,
-    suc.nombre AS nombre_sucursal,
-    punto.nombre AS nombre_punto_venta,
-    punto.nro_punto_venta
-');
-        $this->db->from('phppos_people AS people');
-        $this->db->join('phppos_sucursal_empleado AS rel', 'people.person_id = rel.employee_id');
-        $this->db->join('phppos_sucursales_siat AS suc', 'suc.id = rel.sucursal_id');
-        $this->db->join('phppos_puntos_venta_siat AS punto', 'punto.id_sucursal = suc.id');
-        $this->db->where('people.person_id', $employee_id);
-        $this->db->limit(2);
-        $row = $this->db->get()->row();
-
-        if (!$row) {
+        // Si no hay sucursal asignada, mostrar error y vista vacía
+        if (!$sucursal_id) {
             $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
+            
+            // Cargar vistas con listado vacío
             $this->load->view('partial/header');
+            $this->load->view('partial/header_facturacion', $datos_usuario);
             $this->load->view('billing/index', [
-                'facturas'    => [],
-                'fechainicio' => $inicio,
-                'fechafin'    => $fin
+                'facturas'      => [],
+                'fechainicio'   => $inicio,
+                'fechafin'      => $fin,
+                'datos_usuario' => $datos_usuario
             ]);
+            $this->load->view('partial/footer');
             return;
         }
 
-        $datos_usuario = [
-            'nombre_empleado'    => trim($row->first_name . ' ' . $row->last_name),
-            'nombre_sucursal'    => $row->nombre_sucursal,
-            'nombre_punto_venta' => $row->nombre_punto_venta,
-            'nro_punto_venta'    => $row->nro_punto_venta
-        ];
-
-        $sucursal_id = $row->sucursal_id;
-
-        // Llamar a la API con sucursal dinámica
+        // 3) Llamar a la API con IDs dinámico (sucursal) y fechas
         $resp = $this->call_api([
             'funcion'     => 'listarFacturas',
             'ids'         => $sucursal_id,
@@ -151,72 +122,90 @@ class Billing extends Secure_area
         if (isset($resp['facturas'])) {
             $facturas = $resp['facturas'];
         } else {
+            // Si la API devolvió error, lo guardamos en flash y dejamos la tabla vacía
             $this->session->set_flashdata('error', $resp['error'] ?? 'Error al listar facturas');
         }
 
+        // 4) Cargar las vistas (cabecera + listado + pie)
         $this->load->view('partial/header');
-        // 4) Cargar el header de facturación con datos del usuario
         $this->load->view('partial/header_facturacion', $datos_usuario);
-
-
         $this->load->view('billing/index', [
-            'facturas'        => $facturas,
-            'fechainicio'     => $inicio,
-            'fechafin'        => $fin,
-            'datos_usuario'   => $datos_usuario
+            'facturas'      => $facturas,
+            'fechainicio'   => $inicio,
+            'fechafin'      => $fin,
+            'datos_usuario' => $datos_usuario
         ]);
-        // 6) Cargar el footer
         $this->load->view('partial/footer');
     }
 
 
     // Ver / Descargar PDF
-    public function ver_factura($idfac = null)
-    {
-        if (!$idfac) {
-            $this->session->set_flashdata('error', 'Factura no identificada');
-            redirect('billing/index');
-            return;
-        }
-
-        $datos_usuario = $this->_datos_usuario();
-        $sucursal_id   = $datos_usuario['sucursal_id'];
-
-        // Buscar la factura por ID
-        $resp = $this->call_api([
-            'funcion'     => 'listarFacturas',
-            'ids'         => $sucursal_id,
-            'fechainicio' => '2000-01-01',
-            'fechafin'    => date('Y-m-d')
-        ]);
-
-        $factura = null;
-        foreach ($resp['facturas'] ?? [] as $f) {
-            if ((string)$f['id'] === (string)$idfac) {
-                $factura = $f;
-                break;
-            }
-        }
-
-        if (!$factura || empty($factura['cuf'])) {
-            $this->session->set_flashdata('error', 'No se encontró CUF para la factura');
-            redirect('billing/index');
-            return;
-        }
-
-        // Construir URL del visor del SIAT
-        $url = "https://siat.impuestos.gob.bo/consulta/QR?" . http_build_query([
-            'nit'           => $factura['nitEmisor'],
-            'cuf'           => $factura['cuf'],
-            'numero'        => $factura['numeroFactura'],
-            'fechaEmision'  => $factura['fecha'],
-            'cajero'        => '1'
-        ]);
-
-        redirect($url);
+   public function ver_en_siat($idfac = null)
+{
+    // 1) Validar que se recibió un ID
+    if (!$idfac) {
+        $this->session->set_flashdata('error', 'Factura no identificada');
+        redirect('billing/index');
+        return;
     }
 
+    // 2) Obtener datos del empleado y su sucursal
+    $datos_usuario = $this->_datos_usuario();
+    $sucursal_id   = $datos_usuario['sucursal_id'];
 
+    // Si no hay sucursal asignada, no podemos continuar
+    if (!$sucursal_id) {
+        $this->session->set_flashdata('error', 'No tienes una sucursal asignada.');
+        redirect('billing/index');
+        return;
+    }
+
+    // 3) Llamar a la API para listar facturas (rango amplio de fechas)
+    //    De ese modo nos aseguramos de encontrar la factura cuyo ID es $idfac.
+    $resp = $this->call_api([
+        'funcion'     => 'listarFacturas',
+        'ids'         => $sucursal_id,
+        // Rango amplio: desde 2000-01-01 hasta la fecha actual
+        'fechainicio' => '2000-01-01',
+        'fechafin'    => date('Y-m-d')
+    ]);
+
+    // 4) Buscar en el arreglo de facturas la que tenga id == $idfac
+    $factura = null;
+    foreach ($resp['facturas'] ?? [] as $f) {
+        // Comparamos como strings para evitar problemas de tipo
+        if ((string)$f['id'] === (string)$idfac) {
+            $factura = $f;
+            break;
+        }
+    }
+
+    // 5) Validar que se encontró la factura y que tenga campo 'cuf'
+    if (!$factura || empty($factura['cuf'])) {
+        $this->session->set_flashdata('error', 'No se encontró CUF para la factura');
+        redirect('billing/index');
+        return;
+    }
+
+    // 6) Construir la URL de SIAT usando los campos que devolvió la API
+    //    Según la documentación de la API SIAT /factura/funcionesFactura.php, 
+    //    en listarFacturas vienen: nitEmisor, cuf, numeroFactura, fecha (YYYY-MM-DD), etc.
+    $query = [
+        'nit'           => $factura['nitEmisor'],
+        'cuf'           => $factura['cuf'],
+        'numero'        => $factura['numeroFactura'],
+        'fechaEmision'  => $factura['fecha'],
+        // El parámetro 'cajero' puede ir fijo en '1' o podrías usar el ID del empleado
+        // local si tu implementación de SIAT lo requiere. Aquí dejamos '1' como en el ejemplo:
+        'cajero'        => '1'
+    ];
+    $url = "https://siat.impuestos.gob.bo/consulta/QR?" . http_build_query($query);
+
+    // 7) Redirigir al navegador hacia la página de SIAT
+    redirect($url);
+}
+
+    // Enviar Factura por Email
     public function enviar_email($idfac = null)
     {
         if (!$idfac) {
@@ -510,10 +499,7 @@ public function configuracion()
 
      public function editarConfiguracion()
     {
-        // 1) Obtener datos del usuario
-        $datos_usuario = $this->_datos_usuario();
-
-        // 2) Obtener la configuración actual de la API
+    
         $respuesta = $this->call_api([
             'funcion' => 'configuracionSiat'
         ]);
@@ -521,58 +507,53 @@ public function configuracion()
         $config = $respuesta['configuracion'] ?? [];
 
         // 3) Enviar a la vista de edición
-        $this->load->view('partial/header', $datos_usuario);
-        $this->load->view('partial/header_facturacion', $datos_usuario);
+       
+       
         $this->load->view('billing/editarConfiguracion', [
             'config' => $config
         ]);
-        $this->load->view('partial/footer');
+        
     }
 
 
     public function guardarConfiguracion()
-    {
-    
-        $post = $this->input->post();
+{
+    $post = $this->input->post();
+    $params = [
+        'funcion'          => 'updConfiguracion',
+        'nomsistema'       => $post['nomsistema']       ?? '',
+        'codsistema'       => $post['codsistema']       ?? '',
+        'rzssistema'       => $post['rzssistema']       ?? '',
+        'nitsistema'       => $post['nitsistema']       ?? '',
+        'modsistema'       => $post['modsistema']       ?? '',
+        'cafcsistema'      => $post['cafcsistema']      ?? '',
+        'monsistema'       => $post['monsistema']       ?? '',
+        'docsectorsistema' => $post['docsectorsistema'] ?? '',
+        'facsistema'       => $post['facsistema']       ?? '',
+        'toksistema'       => $post['toksistema']       ?? '',
+        'metsistema'       => $post['metsistema']       ?? '',
+        'ciusistema'       => $post['ciusistema']       ?? '',
+        'telsistema'       => $post['telsistema']       ?? '',
+        'impsistema'       => $post['impsistema']       ?? '',
+        'ambsistema'       => $post['ambsistema']       ?? '',
+        'inicafcsistema'   => $post['inicafcsistema']   ?? '',
+        'fincafcsistema'   => $post['fincafcsistema']   ?? '',
+        'pubsistema'       => $post['pubsistema']       ?? '',
+        'privsistema'      => $post['privsistema']      ?? '',
+        'emailsistema'     => $post['emailsistema']     ?? '',
+        'pwdemailsistema'  => $post['pwdemailsistema']  ?? '',
+        'smtpemailsistema' => $post['smtpemailsistema'] ?? ''
+    ];
 
-        
-        $params = [
-            'funcion'            => 'updConfiguracion',
-            'nomsistema'         => $post['nomsistema']         ?? '',
-            'codsistema'         => $post['codsistema']         ?? '',
-            'rzssistema'         => $post['rzssistema']         ?? '',
-            'nitsistema'         => $post['nitsistema']         ?? '',
-            'modsistema'         => $post['modsistema']         ?? '',
-            'cafcsistema'        => $post['cafcsistema']        ?? '',
-            'monsistema'         => $post['monsistema']         ?? '',
-            'docsectorsistema'   => $post['docsectorsistema']   ?? '',
-            'facsistema'         => $post['facsistema']         ?? '',
-            'toksistema'         => $post['toksistema']         ?? '',
-            'metsistema'         => $post['metsistema']         ?? '',
-            'ciusistema'         => $post['ciusistema']         ?? '',
-            'telsistema'         => $post['telsistema']         ?? '',
-            'impsistema'         => $post['impsistema']         ?? '',
-            'ambsistema'         => $post['ambsistema']         ?? '',
-            'inicafcsistema'     => $post['inicafcsistema']     ?? '',
-            'fincafcsistema'     => $post['fincafcsistema']     ?? '',
-            'pubsistema'         => $post['pubsistema']         ?? '',
-            'privsistema'        => $post['privsistema']        ?? '',
-            'emailsistema'       => $post['emailsistema']       ?? '',
-            'pwdemailsistema'    => $post['pwdemailsistema']    ?? '',
-            'smtpemailsistema'   => $post['smtpemailsistema']   ?? ''
-        ];
-
-        $resp = $this->call_api($params);
-
-        if (!empty($resp['success']) && $resp['success'] === true) {
-            $this->session->set_flashdata('success', 'Configuración guardada correctamente.');
-        } else {
-            $this->session->set_flashdata('error', $resp['error'] ?? 'No se pudo guardar la configuración.');
-        }
-
-        redirect('billing/configuracion');
+    $resp = $this->call_api($params);
+    if (!empty($resp['success']) && $resp['success'] === true) {
+        $this->session->set_flashdata('success', 'Configuración guardada correctamente.');
+    } else {
+        $this->session->set_flashdata('error', $resp['error'] ?? 'No se pudo guardar la configuración.');
     }
-    
+    redirect('billing/configuracion');
+}
+
     ////
 
     // SUCURSALES
