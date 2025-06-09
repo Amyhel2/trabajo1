@@ -1,238 +1,159 @@
+
 <div class="container-fluid">
-  <!-- Mensajes de éxito / error (Bootstrap 3) -->
+  <!-- Mensajes de éxito / error -->
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible" role="alert">
-      <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
-        <span aria-hidden="true">&times;</span>
-      </button>
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
       <i class="fa fa-check-circle"></i>
       <?= $this->session->flashdata('success') ?>
     </div>
   <?php endif; ?>
-
   <?php if ($this->session->flashdata('error')): ?>
     <div class="alert alert-danger alert-dismissible" role="alert">
-      <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
-        <span aria-hidden="true">&times;</span>
-      </button>
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
       <i class="fa fa-exclamation-circle"></i>
       <?= $this->session->flashdata('error') ?>
     </div>
   <?php endif; ?>
 
-  <!-- Formulario de Búsqueda -->
-  <div class="card mb-4 shadow-sm">
+  <!-- Filtro de fechas -->
+  <div class="card mb-3">
     <div class="card-body">
-      <form method="post" action="<?= site_url('billing/index') ?>" class="row g-3">
-        <div class="col-md-3">
-          <label>Fecha Inicio:</label>
-          <input type="date" class="form-control" name="fecha_inicio" value="<?= $fechainicio ?>">
-        </div>
-        <div class="col-md-3">
-          <label>Fecha Fin:</label>
-          <input type="date" class="form-control" name="fecha_fin" value="<?= $fechafin ?>">
-        </div>
-        <div class="col-md-3 align-self-end">
-          <button type="submit" class="btn btn-info w-100">
-            <i class="fa fa-search"></i> Buscar
-          </button>
-        </div>
+      <form method="post" action="<?= site_url('billing/index') ?>" class="form-inline">
+        <label class="mr-2">Fecha Inicio:</label>
+        <input type="date" name="fecha_inicio" class="form-control mr-3" value="<?= $fechainicio ?>">
+        <label class="mr-2">Fecha Fin:</label>
+        <input type="date" name="fecha_fin" class="form-control mr-3" value="<?= $fechafin ?>">
+        <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
       </form>
     </div>
   </div>
-  <br>
 
-  <!-- Tabla de Resultados -->
-  <div class="card shadow-sm">
+  <!-- Tabla de facturas -->
+  <div class="card">
     <div class="card-header bg-primary text-white">
-      <strong><i class="fa fa-list"></i> Resultados</strong>
+      <i class="fa fa-list"></i> Resultados
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-striped table-hover mb-0">
-          <thead class="thead-dark">
+        <table class="table table-striped mb-0">
+          <thead>
             <tr>
-              <th>#</th>
-              <th>Fecha / Hora</th>
-              <th>N° Factura</th>
-              <th>NIT</th>
-              <th>Razón Social</th>
-              <th>Total (Bs)</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th>#</th><th>Fecha / Hora</th><th>N° Factura</th>
+              <th>NIT</th><th>Razón Social</th><th>Total (Bs)</th>
+              <th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <?php if (!empty($facturas)): ?>
-              <?php foreach ($facturas as $i => $f): ?>
-                <?php
-                  $idf       = $f['id'];
-                  $estado    = $f['estado'];
-                  $cuf       = $f['cuf']               ?? '';
-                  $email     = $f['email']             ?? '';
-                  $nitEmisor = $f['nitEmisor']         ?? '';
-                  $rzs       = $f['nombreRazonSocial'] ?? '';
-                  $nro       = $f['numeroFactura']     ?? '';
-                ?>
-                <tr>
-                  <td><?= $i + 1 ?></td>
-                  <td><?= "{$f['fecha']} {$f['hora']}" ?></td>
-                  <td><?= $nro ?></td>
-                  <td><?= $f['numeroDocumento'] ?></td>
-                  <td><?= $rzs ?></td>
-                  <td><?= number_format($f['montoTotalSujetoIva'], 2, ',', '.') ?></td>
-                  <td>
-                    <span class="badge badge-<?= $estado === 'VALIDO'
-                      ? 'success'
-                      : ($estado === 'ANULADO' ? 'danger' : 'secondary') ?>">
-                      <?= $estado ?>
-                    </span>
-                  </td>
-                  <td>
-                    <div class="btn-group" role="group">
-
-                      <?php if ($estado === 'VALIDO'): ?>
-                        <!-- Ver en SIAT -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
-                              'nit'    => $nitEmisor,
-                              'cuf'    => $cuf,
-                              'numero' => $nro,
-                              't'      => 1
-                            ]) ?>"
-                           target="_blank"
-                           class="btn btn-info btn-sm"
-                           title="Ver Factura en Impuestos">
-                          <i class="fa fa-external-link-alt"></i>
-                        </a>
-
-                        <!-- Imprimir Rollo/Ticket -->
-                        <button type="button"
-                                class="btn btn-default btn-sm"
-                                title="Imprimir Rollo/Ticket"
-                                onclick="window.location='<?= site_url("billing/imprimir_ticket/{$idf}") ?>';">
-                          <i class="fa fa-print"></i>
-                        </button>
-
-                        <!-- Imprimir Media Página -->
-                        <button type="button"
-                                class="btn btn-info btn-sm"
-                                title="Imprimir Media Página"
-                                onclick="window.location='<?= site_url("billing/imprimir_pagina/{$idf}") ?>';">
-                          <i class="fa fa-print"></i>
-                        </button>
-
-                        <!-- Ver XML -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/api/Siat/temp/factura-<?= $cuf ?>.xml"
-                           target="_blank"
-                           class="btn btn-success btn-sm"
-                           title="Ver XML">
-                          <i class="fa fa-file-code"></i>
-                        </a>
-
-                        <!-- Enviar Email -->
-                        <?php if ($email): ?>
-                          <button type="button"
-                                  class="btn btn-warning btn-sm"
-                                  title="Enviar Email"
-                                  onclick="if(confirm('¿Enviar factura al correo <?= $email ?>?')) window.location='<?= site_url("billing/enviar_email/{$idf}") ?>';">
-                            <i class="fa fa-envelope"></i>
-                          </button>
-                        <?php else: ?>
-                          <button class="btn btn-warning btn-sm disabled" title="No hay correo">
-                            <i class="fa fa-envelope"></i>
-                          </button>
-                        <?php endif; ?>
-
-                        <!-- Anular Factura -->
-                        <button type="button"
-                                class="btn btn-danger btn-sm"
-                                title="Anular Factura"
-                                onclick="if(confirm('¿Seguro que deseas anular esta factura?')) window.location='<?= site_url("billing/anular_factura/{$idf}") ?>';">
-                          <i class="fa fa-ban"></i>
-                        </button>
-
-                      <?php elseif ($estado === 'ANULADO'): ?>
-                        <!-- Ver en SIAT -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
-                              'nit'    => $nitEmisor,
-                              'cuf'    => $cuf,
-                              'numero' => $nro,
-                              't'      => 1
-                            ]) ?>"
-                           target="_blank"
-                           class="btn btn-default btn-sm"
-                           title="Ver Factura en Impuestos">
-                          <i class="fa fa-external-link-alt"></i>
-                        </a>
-
-                        <!-- Revertir Anulación -->
-                        <button type="button"
-                                class="btn btn-danger btn-sm"
-                                title="Revertir Anulación"
-                                onclick="if(confirm('¿Seguro que deseas revertir la anulación?')) window.location='<?= site_url("billing/revertir_factura/{$idf}") ?>';">
-                          <i class="fa fa-undo"></i>
-                        </button>
-
-                      <?php elseif ($estado === 'REVERTIDO'): ?>
-                        <!-- Ver en SIAT -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
-                              'nit'    => $nitEmisor,
-                              'cuf'    => $cuf,
-                              'numero' => $nro,
-                              't'      => 1
-                            ]) ?>"
-                           target="_blank"
-                           class="btn btn-info btn-sm"
-                           title="Ver Factura en Impuestos">
-                          <i class="fa fa-external-link-alt"></i>
-                        </a>
-
-                        <!-- Imprimir Rollo/Ticket -->
-                        <button type="button"
-                                class="btn btn-default btn-sm"
-                                title="Imprimir Rollo/Ticket"
-                                onclick="window.location='<?= site_url("billing/imprimir_ticket/{$idf}") ?>';">
-                          <i class="fa fa-print"></i>
-                        </button>
-
-                        <!-- Imprimir Media Página -->
-                        <button type="button"
-                                class="btn btn-info btn-sm"
-                                title="Imprimir Media Página"
-                                onclick="window.location='<?= site_url("billing/imprimir_pagina/{$idf}") ?>';">
-                          <i class="fa fa-print"></i>
-                        </button>
-
-                        <!-- Ver XML -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/api/Siat/temp/factura-<?= $cuf ?>.xml"
-                           target="_blank"
-                           class="btn btn-success btn-sm"
-                           title="Ver XML">
-                          <i class="fa fa-file-code"></i>
-                        </a>
+              <?php foreach ($facturas as $i => $f): 
+                $idf       = $f['id'];
+                $estado    = $f['estado'];
+                $cuf       = $f['cuf']               ?? '';
+                $email     = $f['email']             ?? '';
+                $nitEmisor = $f['nitEmisor']         ?? '';
+                $rzs       = $f['nombreRazonSocial'] ?? '';
+                $nro       = $f['numeroFactura']     ?? '';
+              ?>
+              <tr>
+                <td><?= $i+1 ?></td>
+                <td><?= "{$f['fecha']} {$f['hora']}" ?></td>
+                <td><?= $nro ?></td>
+                <td><?= $f['numeroDocumento'] ?></td>
+                <td><?= $rzs ?></td>
+                <td><?= number_format($f['montoTotalSujetoIva'],2,',','.') ?></td>
+                <td>
+                  <span class="badge badge-<?= $estado==='VALIDO'?'success':($estado==='ANULADO'?'danger':'secondary') ?>">
+                    <?= $estado ?>
+                  </span>
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <?php if ($estado === 'VALIDO'): ?>
+                      <!-- Ver en SIAT -->
+                      <a target="_blank"
+                         href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
+                             'nit'    => $nitEmisor,
+                             'cuf'    => $cuf,
+                             'numero' => $nro,
+                             't'      => 1
+                          ]) ?>"
+                         class="btn btn-info" title="Ver en SIAT">
+                        <i class="fa fa-external-link-alt"></i>
+                      </a>
+                      <!-- Imprimir ticket/página -->
+                      <button class="btn btn-default" title="Imprimir ticket"
+                              onclick="window.location='<?= site_url("billing/imprimir_ticket/$idf") ?>'">
+                        <i class="fa fa-print"></i>
+                      </button>
+                      <button class="btn btn-info" title="Imprimir media página"
+                              onclick="window.location='<?= site_url("billing/imprimir_pagina/$idf") ?>'">
+                        <i class="fa fa-print"></i>
+                      </button>
+                      <!-- Ver XML -->
+                      <a target="_blank"
+                         href="<?= base_url("Siat/temp/factura-$cuf.xml") ?>"
+                         class="btn btn-success" title="Ver XML">
+                        <i class="fa fa-file-code"></i>
+                      </a>
+                      <!-- Enviar Email -->
+                      <?php if ($email): ?>
+                        <button class="btn btn-warning"
+        onclick="reEnviarMailFactura(
+           '<?= $email ?>',
+           '<?= htmlspecialchars($rzs, ENT_QUOTES) ?>',
+           '<?= $f['numeroDocumento'] ?>',
+           '<?= $cuf ?>'
+        )"
+        title="Reenviar Email">
+  <i class="fa fa-envelope"></i>
+</button>
 
                       <?php else: ?>
-                        <!-- OTROS ESTADOS: solo Ver SIAT -->
-                        <a href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
-                              'nit'    => $nitEmisor,
-                              'cuf'    => $cuf,
-                              'numero' => $nro,
-                              't'      => 1
-                            ]) ?>"
-                           target="_blank"
-                           class="btn btn-secondary btn-sm"
-                           title="Ver Factura en Impuestos">
-                          <i class="fa fa-external-link-alt"></i>
-                        </a>
+                        <button class="btn btn-warning disabled" title="No hay correo">
+                          <i class="fa fa-envelope"></i>
+                        </button>
                       <?php endif; ?>
+                      <!-- Anular -->
+                      <button class="btn btn-danger"
+                              onclick="if(confirm('¿Anular factura?')) window.location='<?= site_url("billing/anular_factura/$idf") ?>';"
+                              title="Anular">
+                        <i class="fa fa-ban"></i>
+                      </button>
 
-                    </div>
-                  </td>
-                </tr>
+                    <?php elseif ($estado==='ANULADO'): ?>
+                      <!-- Ver en SIAT -->
+                      <a target="_blank"
+                         href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
+                             'nit'=>$nitEmisor,'cuf'=>$cuf,'numero'=>$nro,'t'=>1
+                          ]) ?>"
+                         class="btn btn-default" title="Ver en SIAT">
+                        <i class="fa fa-external-link-alt"></i>
+                      </a>
+                      <!-- Revertir -->
+                      <button class="btn btn-danger"
+                              onclick="if(confirm('¿Revertir anulación?')) window.location='<?= site_url("billing/revertir_factura/$idf") ?>';"
+                              title="Revertir factura">
+                        <i class="fa fa-undo"></i>
+                      </button>
+
+                    <?php else: ?>
+                      <!-- Otros estados: solo Ver SIAT -->
+                      <a target="_blank"
+                         href="https://pilotosiat.impuestos.gob.bo/consulta/QR?<?= http_build_query([
+                             'nit'=>$nitEmisor,'cuf'=>$cuf,'numero'=>$nro,'t'=>1
+                          ]) ?>"
+                         class="btn btn-secondary" title="Ver en SIAT">
+                        <i class="fa fa-external-link-alt"></i>
+                      </a>
+                    <?php endif; ?>
+                  </div>
+                </td>
+              </tr>
               <?php endforeach; ?>
             <?php else: ?>
               <tr>
-                <td colspan="8" class="text-center">No se encontraron facturas.</td>
+                <td colspan="8" class="text-center p-3">No se encontraron facturas.</td>
               </tr>
             <?php endif; ?>
           </tbody>
@@ -242,12 +163,63 @@
   </div>
 </div>
 
-
 <script>
-  // Confirmación para anular
-  function confirmarAnulacion(id) {
-    if (confirm('¿Está seguro de anular esta factura?')) {
-      window.location.href = '<?= site_url('billing/anular_factura') ?>/' + id;
-    }
+  // 1) Confirmación: “¿Desea reenviar correo de esta factura?”
+  function reEnviarMailFactura(mail, rzs, nit, cuf) {
+    swal({
+      title: "Reenviar Factura",
+      text: "¿Desea reenviar correo de esta factura?",
+      icon: "warning",
+      buttons: {
+        cancel: "Cancelar",
+        confirm: {
+          text: "Enviar",
+          value: true,
+          visible: true,
+          className: "btn-warning"
+        }
+      },
+      dangerMode: true,
+    })
+    .then((isConfirm) => {
+      if (isConfirm) {
+        enviarMailFactura(mail, rzs, nit, cuf);
+      }
+    });
+  }
+
+  // 2) Llamada directa a la API (igual que en tu sistema original)
+  function enviarMailFactura(mail, rzs, nit, cuf) {
+    var body = {
+      funcion: "enviarMailFactura",
+      mail: mail,
+      rzs: rzs,
+      nit: nit,
+      cuf: cuf
+    };
+
+    Empresa.showSpinner();
+    Empresa.rest({
+      verbo: 'POST',
+      url: Empresa.armarUrl("/api/factura/funcionesFactura.php"),
+      data: body,
+      funcionExito: function(respuesta) {
+        Empresa.hideSpinner();
+        if (respuesta.correo) {
+          swal("¡Éxito!", "Factura reenviada correctamente a: " + mail, "success");
+        } else {
+          swal("Error", respuesta.error || "No se pudo reenviar la factura", "error");
+        }
+      },
+      funcionError: function(e) {
+        Empresa.hideSpinner();
+        swal("Error", "Falla en la petición de reenvío", "error");
+      }
+    });
   }
 </script>
+
+
+
+
+
