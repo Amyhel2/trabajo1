@@ -48,3 +48,13 @@ $route['i/(:any)'] = "public_view/pay_receipt/$1";
 $route['payment_success/(:any)'] = "public_view/view_payment_receipt/$1";
 /* End of file routes.php */
 /* Location: ./application/config/routes.php */
+
+$route['billing']                      = 'billing/index';
+$route['billing/index']                = 'billing/index';
+$route['billing/ver_en_siat/(:num)']   = 'billing/ver_en_siat/$1';
+$route['billing/imprimir_ticket/(:num)']  = 'billing/imprimir_ticket/$1';
+$route['billing/imprimir_pagina/(:num)']  = 'billing/imprimir_pagina/$1';
+$route['billing/anular_factura']          = 'billing/anular_factura';        // AJAX POST
+$route['billing/revertir_factura/(:num)'] = 'billing/revertir_factura/$1';
+$route['billing/enviar_email']            = 'billing/enviar_email';          // AJAX POST
+$route['billing/ver_xml/(:any)']          = 'billing/ver_xml/$1';

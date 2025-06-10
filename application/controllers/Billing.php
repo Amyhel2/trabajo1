@@ -1,4 +1,5 @@
 <?php
+defined('BASEPATH') OR exit('No direct script access allowed');
 
 use oasis\names\specification\ubl\schema\xsd\CommonAggregateComponents_2\Contact;
 
@@ -24,16 +25,19 @@ class Billing extends Secure_area
         $this->load->helper(['form', 'url']);
         $this->load->library('session');
         $this->load->model(['Sucursal_model', 'PuntoVenta_model', 'Billing_model']);
-        $this->api_url = 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
+
+        // URL base de la API de facturación
+        // Por ejemplo: http://localhost:8080/facturacion/api/factura/funcionesFactura.php
+        $this->api_url = getenv('API_FACTURA_URL')
+                         ?: 'http://localhost:8080/facturacion/api/factura/funcionesFactura.php';
     }
-///
-///
 
-
-
-///
-///
-    //FUNCION DE LLAMADA PRINCIPAL A LA API DE FACTURACION
+    /**
+     * Método genérico para llamar a la API externa de facturación con JSON.
+     * Espera siempre 'funcion' dentro de $params, y si aplica, 'ids' (sucursal).
+     * @param array $params
+     * @return array Respuesta decodificada o ['error'=>...]
+     */
     private function call_api(array $params)
     {
         $ch = curl_init($this->api_url);
@@ -57,13 +61,16 @@ class Billing extends Secure_area
 
         $json = json_decode($raw, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            log_message('error', 'JSON decode error: ' . json_last_error_msg());
+            log_message('error', 'JSON decode error: ' . json_last_error_msg() . " | Raw: $raw");
             return ['error' => 'Respuesta inválida del servidor'];
         }
         return $json;
     }
-    ////
 
+    /**
+     * Obtiene datos del usuario (sucursal/punto de venta) desde sesión y BD.
+     * @return array
+     */
     private function _datos_usuario()
     {
         $employee_id = $this->session->userdata('person_id');
@@ -107,10 +114,11 @@ class Billing extends Secure_area
 
     /**
      * Listado de facturas con filtro por fechas.
+     * GET/POST a billing/index
      */
     public function index()
     {
-        // 1) Fechas de búsqueda
+        // 1) Fechas de búsqueda: si POST, vienen de filtro; sino default: mes actual
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
         if ($inicio > $fin) {
@@ -119,11 +127,12 @@ class Billing extends Secure_area
             return;
         }
 
-        // 2) Datos usuario
+        // 2) Datos usuario/sucursal
         $datos_usuario = $this->_datos_usuario();
         $sucursal_id   = $datos_usuario['sucursal_id'];
         if (!$sucursal_id) {
             $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
+            // Carga vistas sin facturas
             $this->load->view('partial/header');
             $this->load->view('partial/header_facturacion', $datos_usuario);
             $this->load->view('billing/index', [
@@ -136,16 +145,21 @@ class Billing extends Secure_area
             return;
         }
 
-        // 3) Llamada a la API
+        // 3) Llamada a la API: listarFacturas
         $resp = $this->call_api([
             'funcion'     => 'listarFacturas',
             'ids'         => $sucursal_id,
             'fechainicio' => $inicio,
             'fechafin'    => $fin
         ]);
-        $facturas = $resp['facturas'] ?? [];
+        $facturas = [];
+        if (isset($resp['error'])) {
+            $this->session->set_flashdata('error', 'Error al obtener facturas: ' . $resp['error']);
+        } else {
+            $facturas = $resp['facturas'] ?? [];
+        }
 
-        // 4) Carga de vistas
+        // 4) Carga de vistas (manteniendo tu estructura original)
         $this->load->view('partial/header');
         $this->load->view('partial/header_facturacion', $datos_usuario);
         $this->load->view('billing/index', [
@@ -158,7 +172,8 @@ class Billing extends Secure_area
     }
 
     /**
-     * Redirige a SIAT (pruebas) para ver la factura vía QR.
+     * Redirige a SIAT para ver la factura vía QR.
+     * billing/ver_en_siat/{idfac}
      */
     public function ver_en_siat($idfac = null)
     {
@@ -174,7 +189,7 @@ class Billing extends Secure_area
             redirect('billing/index');
             return;
         }
-        // Tomamos todas las facturas (rango amplio) sólo para extraer cuf, nitEmisor y numero
+        // Llamar lista amplia para buscar CUF si no lo tienes en la vista
         $resp = $this->call_api([
             'funcion'     => 'listarFacturas',
             'ids'         => $sucursal_id,
@@ -202,172 +217,240 @@ class Billing extends Secure_area
         redirect('https://pilotosiat.impuestos.gob.bo/consulta/QR?' . http_build_query($query));
     }
 
-
-
     /**
-     * Enviar factura por correo electrónico
+     * Imprimir ticket: redirige al endpoint de la API que genera/imprime ticket.
+     * billing/imprimir_ticket/{idfac}
      */
-   
-
-    public function imprimir_ticket($idf)
-    {
-        $payload = ['funcion' => 'imprimirTicket', 'idf' => $idf];
-        $resp = $this->call_api($payload);
-
-        if (!empty($resp['url_ticket'])) {
-            redirect($resp['url_ticket']);
-        } else {
-            $this->session->set_flashdata('error', 'No se pudo generar el ticket.');
-            redirect('billing/index');
-        }
-    }
-
-    /** Imprime media página */
-    public function imprimir_pagina($idf)
-    {
-        $payload = ['funcion' => 'imprimirPagina', 'idf' => $idf];
-        $resp = $this->call_api($payload);
-
-        if (!empty($resp['url_pagina'])) {
-            redirect($resp['url_pagina']);
-        } else {
-            $this->session->set_flashdata('error', 'No se pudo generar la media página.');
-            redirect('billing/index');
-        }
-    }
-
-    /** Anula la factura */
-    public function anular_factura($idf)
-    {
-        $payload = ['funcion' => 'anularFactura', 'idf' => $idf];
-        $resp = $this->call_api($payload);
-
-        if (!empty($resp['success'])) {
-            $this->session->set_flashdata('success', 'Factura anulada correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al anular la factura.');
-        }
-        redirect('billing/index');
-    }
-
-    /** Revierte una factura anulada */
-    public function revertir_factura($idf)
-    {
-        $payload = ['funcion' => 'revertirFactura', 'idf' => $idf];
-        $resp = $this->call_api($payload);
-
-        if (!empty($resp['success'])) {
-            $this->session->set_flashdata('success', 'Anulación revertida correctamente.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al revertir la anulación.');
-        }
-        redirect('billing/index');
-    }
-
-public function enviar_email($idfac = null)
+   public function imprimir_ticket($idfac = null)
 {
-    // 1) Si es AJAX (SweetAlert / JS) -> devolver JSON
-    if ($this->input->is_ajax_request()) {
-        // Cabecera JSON
-        header('Content-Type: application/json; charset=utf-8');
-
-        // Extraer parámetros enviados vía POST
-        $email = $this->input->post('mail')  ?? '';
-        $rzs   = $this->input->post('rzs')   ?? '';
-        $nit   = $this->input->post('nit')   ?? '';
-        $cuf   = $this->input->post('cuf')   ?? '';
-
-        // Validar datos
-        if (!$email || !$rzs || !$nit || !$cuf) {
-            echo json_encode(['error' => 'Faltan datos para reenviar el correo.']);
-            return;
-        }
-
-        // Llamada a la API
-        $resp = $this->call_api([
-            'funcion' => 'enviarMailFactura',
-            'mail'    => $email,
-            'rzs'     => $rzs,
-            'nit'     => $nit,
-            'cuf'     => $cuf
-        ]);
-
-        // Interpretar respuesta
-        if (!empty($resp['success']) || isset($resp['correo'])) {
-            echo json_encode(['success' => true, 'correo' => $resp['correo'] ?? null]);
-        } else {
-            echo json_encode(['error' => $resp['error'] ?? 'No se pudo enviar el email.']);
-        }
-        return;
-    }
-
-    // 2) Modo clásico (GET /billing/enviar_email/{idfac})
     if (!$idfac) {
-        $this->session->set_flashdata('error', 'Factura no identificada');
+        $this->session->set_flashdata('error', 'Factura no especificada');
+        redirect('billing/index');
+        return;
+    }
+    $datos_usuario = $this->_datos_usuario();
+    $sucursal_id = $datos_usuario['sucursal_id'];
+    if (!$sucursal_id) {
+        $this->session->set_flashdata('error', 'No tienes sucursal asignada');
         redirect('billing/index');
         return;
     }
 
-    // Obtener sucursal del usuario
-    $du  = $this->_datos_usuario();
-    $ids = $du['sucursal_id'];
-    if (!$ids) {
-        $this->session->set_flashdata('error', 'No tienes una sucursal asignada.');
-        redirect('billing/index');
-        return;
-    }
-
-    // Listar facturas para buscar la que corresponda
-    $lista = $this->call_api([
+    // 1) Obtener datos de factura (asegúrate que devuelvan estas claves)
+    // Ejemplo: llamar a API listarFacturas con rango amplio y filtrar:
+    $resp = $this->call_api([
         'funcion'     => 'listarFacturas',
-        'ids'         => $ids,
+        'ids'         => $sucursal_id,
         'fechainicio' => '1900-01-01',
-        'fechafin'    => date('Y-m-d'),
+        'fechafin'    => date('Y-m-d')
     ]);
-
+    $lista = $resp['facturas'] ?? [];
     $factura = null;
-    foreach ($lista['facturas'] ?? [] as $f) {
+    foreach ($lista as $f) {
         if ((string)$f['id'] === (string)$idfac) {
             $factura = $f;
             break;
         }
     }
     if (!$factura) {
-        $this->session->set_flashdata('error', 'Factura no encontrada.');
+        $this->session->set_flashdata('error', 'No se encontró la factura solicitada');
         redirect('billing/index');
         return;
     }
+    // 2) Obtener ítems (asegúrate que devuelvan claves como en la plantilla original)
+    $detalle = $this->call_api([
+        'funcion' => 'listarDetalleFactura',
+        'ids'     => $sucursal_id,
+        'idf'     => $idfac
+    ]);
+    $items = $detalle['items'] ?? [];
 
-    // Extraer datos de la factura
-    $email = $factura['email']             ?? '';
-    $rz    = $factura['nombreRazonSocial'] ?? '';
-    $nit   = $factura['numeroDocumento']   ?? '';
-    $cuf   = $factura['cuf']               ?? '';
+    // 3) Calcular $zero (cero) igual que en plantilla: si la parte entera es 0
+    $zero = '';
+    if (isset($factura['montoTotalSujetoIva'])) {
+        $enteroArr = explode('.', $factura['montoTotalSujetoIva']);
+        if (isset($enteroArr[0]) && intval($enteroArr[0]) === 0) {
+            $zero = 'cero';
+        }
+    }
+    // 4) Calcular leyenda según tipoEmision
+    $leyenda = '';
+    if (isset($factura['tipoEmision'])) {
+        if ((string)$factura['tipoEmision'] === '1') {
+            $leyenda = '“Este documento es la Representación Gráfica de un<br>
+Documento Fiscal Digital emitido en una modalidad de<br>
+facturación en línea”';
+        } else {
+            $leyenda = '“Este documento es la Representación Gráfica de un Documento Fiscal Digital emitido fuera de línea, verifique su envío con su proveedor o en la página web www.impuestos.gob.bo”.';
+        }
+    }
+    // 5) Pasar datos a la vista
+    $this->load->helper('letras'); // si usarás convertir_a_letras en la vista
+    $data = [
+        'factura' => $factura,
+        'items'   => $items,
+        'zero'    => $zero,
+        'leyenda' => $leyenda
+    ];
+    $this->load->view('billing/imprimirticket', $data);
+}
 
-    if (!$email || !$rz || !$nit || !$cuf) {
-        $this->session->set_flashdata('error', 'Faltan datos para reenviar el correo.');
-        redirect('billing/index');
-        return;
+    public function anular_factura()
+    {
+        // Requiere POST
+        $idf = $this->input->post('idf');
+        $motivo = $this->input->post('motivo');
+        if (empty($idf) || empty($motivo)) {
+            // Respuesta JSON de error
+            $this->output
+                 ->set_content_type('application/json')
+                 ->set_output(json_encode([
+                     'success' => false,
+                     'message' => 'Faltan parámetros para anular'
+                 ]));
+            return;
+        }
+        // Datos usuario/sucursal
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+        if (!$sucursal_id) {
+            $this->output
+                 ->set_content_type('application/json')
+                 ->set_output(json_encode([
+                     'success' => false,
+                     'message' => 'No tienes sucursal asignada'
+                 ]));
+            return;
+        }
+        // Llamada a API
+        $resp = $this->call_api([
+            'funcion' => 'anularFactura',
+            'ids'     => $sucursal_id,
+            'idf'     => $idf,
+            'motivo'  => $motivo
+        ]);
+        // Determinar éxito según estructura de respuesta
+        $ok = false;
+        if (isset($resp['success'])) {
+            $ok = (bool)$resp['success'];
+        } elseif (isset($resp['res']['RespuestaServicioFacturacion']['transaccion'])) {
+            $ok = (bool)$resp['res']['RespuestaServicioFacturacion']['transaccion'];
+        }
+        $this->output
+             ->set_content_type('application/json')
+             ->set_output(json_encode([
+                 'success' => $ok,
+                 'data'    => $resp
+             ]));
     }
 
-    // Llamada final a la API
+    /**
+     * Revertir factura anulada: billing/revertir_factura/{idfac}
+     * Puede invocarse vía GET o POST. Aquí aceptamos GET.
+     */
+    public function revertir_factura($idfac = null)
+    {
+        if (!$idfac) {
+            $this->session->set_flashdata('error', 'Factura no especificada');
+            redirect('billing/index');
+            return;
+        }
+        // Datos usuario
+        $datos_usuario = $this->_datos_usuario();
+        $sucursal_id   = $datos_usuario['sucursal_id'];
+        if (!$sucursal_id) {
+            $this->session->set_flashdata('error', 'No tienes sucursal asignada');
+            redirect('billing/index');
+            return;
+        }
+        // Llamada API
+        $resp = $this->call_api([
+            'funcion' => 'revertirFactura',
+            'ids'     => $sucursal_id,
+            'idf'     => $idfac
+        ]);
+        $ok = false;
+        if (isset($resp['res']['RespuestaServicioFacturacion']['transaccion'])) {
+            $ok = (bool)$resp['res']['RespuestaServicioFacturacion']['transaccion'];
+        }
+        if ($ok) {
+            $this->session->set_flashdata('success', 'Factura revertida correctamente');
+        } else {
+            $msg = $resp['error'] ?? 'Error al revertir factura';
+            $this->session->set_flashdata('error', $msg);
+        }
+        redirect('billing/index');
+    }
+
+    /**
+     * Reenviar email de factura: billing/enviar_email
+     * Invocado vía AJAX POST: idf, email, rzs, nit, cuf
+     */
+    public function enviar_email()
+{
+    $idf   = $this->input->post('idf');
+    $email = $this->input->post('email');
+    $rzs   = $this->input->post('rzs');
+    $nit   = $this->input->post('nit');
+    $cuf   = $this->input->post('cuf');
+
+    if (empty($idf) || empty($email) || empty($rzs) || empty($nit) || empty($cuf)) {
+        $this->session->set_flashdata('error', 'Faltan parámetros para reenviar el correo.');
+        $this->output
+             ->set_content_type('application/json')
+             ->set_output(json_encode(['success' => false]));
+        return;
+    }
+    $datos_usuario = $this->_datos_usuario();
+    $sucursal_id   = $datos_usuario['sucursal_id'];
+    if (!$sucursal_id) {
+        $this->session->set_flashdata('error', 'No tienes sucursal asignada.');
+        $this->output
+             ->set_content_type('application/json')
+             ->set_output(json_encode(['success' => false]));
+        return;
+    }
     $resp = $this->call_api([
         'funcion' => 'enviarMailFactura',
+        'ids'     => $sucursal_id,
         'mail'    => $email,
-        'rzs'     => $rz,
+        'rzs'     => $rzs,
         'nit'     => $nit,
         'cuf'     => $cuf
     ]);
-
-    // Flashdata según resultado
-    if (!empty($resp['success']) || isset($resp['correo'])) {
-        $this->session->set_flashdata('success', 'Factura enviada correctamente a ' . $email);
-    } else {
-        $this->session->set_flashdata('error', $resp['error'] ?? 'No se pudo enviar el email.');
+    $ok = false;
+    if (isset($resp['encontrado'])) {
+        $ok = (bool)$resp['encontrado'];
+    } elseif (isset($resp['correo'])) {
+        $ok = (bool)$resp['correo'];
     }
-
-    redirect('billing/index');
+    if ($ok) {
+        $this->session->set_flashdata('success', 'Correo reenviado correctamente a '.$email);
+    } else {
+        $msg = $resp['message'] ?? $resp['error'] ?? 'No se pudo reenviar el correo';
+        $this->session->set_flashdata('error', $msg);
+    }
+    // Devolver JSON con éxito/fallo; el mensaje se mostrará tras recarga
+    $this->output
+         ->set_content_type('application/json')
+         ->set_output(json_encode(['success' => $ok]));
 }
+
+
+    /**
+     * Ver XML de factura: billing/ver_xml/{cuf}
+     * Si tu flujo actual usa base_url("Siat/temp/factura-$cuf.xml"), puedes mantenerlo o descargar desde API.
+     */
+    public function ver_xml($cuf = null)
+    {
+        if (!$cuf) {
+            $this->session->set_flashdata('error', 'CUP de factura no especificado');
+            redirect('billing/index');
+            return;
+        }
+        // Ejemplo: si guardas XML localmente en carpeta Siat/temp, rediriges:
+        redirect(base_url("Siat/temp/factura-$cuf.xml"));
+    }
 
 
 
