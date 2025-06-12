@@ -32,7 +32,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
       </form>
     </div>
   </div>
-
+<br>
   <!-- Tabla de facturas -->
   <div class="card">
     <div class="card-header bg-primary text-white">
@@ -99,7 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                       </a>
                       <!-- Imprimir ticket -->
                       <button class="btn btn-default" title="Imprimir ticket"
-                              onclick="window.location='<?= site_url("billing/imprimir_ticket/$idf") ?>'">
+                              onclick="window.location='<?= site_url("billing/imprimirticket/$idf") ?>'">
                         <i class="fa fa-print"></i>
                       </button>
                       <!-- Imprimir media página -->

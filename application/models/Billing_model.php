@@ -12,7 +12,7 @@ class Billing_model extends MY_Model
         parent::__construct();
         $this->load->model('Appconfig');
     }
-    protected $table = 'phppos_facturas';
+    protected $table = '';
 
 
     /** Inserta un nuevo registro y devuelve su ID local */
@@ -78,5 +78,6 @@ class Billing_model extends MY_Model
         return $this->db->get()->result_array();
     }
 
-  
+
+
 }

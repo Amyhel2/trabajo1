@@ -24,7 +24,8 @@ class Billing extends Secure_area
         parent::__construct();
         $this->load->helper(['form', 'url']);
         $this->load->library('session');
-        $this->load->model(['Sucursal_model', 'PuntoVenta_model', 'Billing_model']);
+        $this->load->model(['Sucursal_model', 'PuntoVenta_model', 'Billing_model', 'Factura_model']);
+        
 
         // URL base de la API de facturación
         // Por ejemplo: http://localhost:8080/facturacion/api/factura/funcionesFactura.php
@@ -118,7 +119,7 @@ class Billing extends Secure_area
      */
     public function index()
     {
-        // 1) Fechas de búsqueda: si POST, vienen de filtro; sino default: mes actual
+        // 1) Fechas de búsqueda
         $inicio = $this->input->post('fecha_inicio') ?? date('Y-m-01');
         $fin    = $this->input->post('fecha_fin')    ?? date('Y-m-d');
         if ($inicio > $fin) {
@@ -131,35 +132,52 @@ class Billing extends Secure_area
         $datos_usuario = $this->_datos_usuario();
         $sucursal_id   = $datos_usuario['sucursal_id'];
         if (!$sucursal_id) {
-            $this->session->set_flashdata('error', 'No tienes una sucursal o punto de venta asignado.');
-            // Carga vistas sin facturas
-            $this->load->view('partial/header');
-            $this->load->view('partial/header_facturacion', $datos_usuario);
-            $this->load->view('billing/index', [
-                'facturas'      => [],
-                'fechainicio'   => $inicio,
-                'fechafin'      => $fin,
-                'datos_usuario' => $datos_usuario
-            ]);
-            $this->load->view('partial/footer');
-            return;
-        }
-
-        // 3) Llamada a la API: listarFacturas
-        $resp = $this->call_api([
-            'funcion'     => 'listarFacturas',
-            'ids'         => $sucursal_id,
-            'fechainicio' => $inicio,
-            'fechafin'    => $fin
-        ]);
-        $facturas = [];
-        if (isset($resp['error'])) {
-            $this->session->set_flashdata('error', 'Error al obtener facturas: ' . $resp['error']);
+            $this->session->set_flashdata('error', 'No tienes una sucursal asignada.');
+            $facturas = [];
         } else {
-            $facturas = $resp['facturas'] ?? [];
+            // 3) Llamada a la API: listarFacturas
+            $resp = $this->call_api([
+                'funcion'     => 'listarFacturas',
+                'ids'         => $sucursal_id,
+                'fechainicio' => $inicio,
+                'fechafin'    => $fin
+            ]);
+
+            if (isset($resp['error'])) {
+                $this->session->set_flashdata('error', 'Error al obtener facturas: ' . $resp['error']);
+                $facturas = [];
+            } else {
+                $facturas = $resp['facturas'] ?? [];
+
+                // 4) Respaldo local: guardar cada factura en siat_factura
+               foreach ($facturas as $f) {
+    $data = [
+        'idPuntoVenta'         => $sucursal_id,
+        'fecha'                => $f['fecha'],
+        'hora'                 => $f['hora'],
+        'nitEmisor'            => $f['nitEmisor'] ?? null,
+        'numeroFactura'        => $f['numeroFactura'],
+        'cuf'                  => $f['cuf'],
+        'nombreRazonSocial'    => $f['nombreRazonSocial'] ?? null,
+        'numeroDocumento'      => $f['numeroDocumento'] ?? null,
+        'montoTotalSujetoIva'  => $f['montoTotalSujetoIva'] ?? null,
+        'descuentoAdicional'   => $f['descuentoAdicional'] ?? null,
+        'montoGiftCard'        => $f['montoGiftCard'] ?? null,
+        'tipoEmision'          => $f['tipoEmision'] ?? null,
+        'estado'               => $f['estado'] ?? null,
+        'email'                => $f['email'] ?? null,
+        'fecha_sinc'           => date('Y-m-d H:i:s'),
+        'sincronizado'         => 1
+    ];
+
+    $this->Factura_model->guardar_o_actualizar($data);
+}
+
+
+            }
         }
 
-        // 4) Carga de vistas (manteniendo tu estructura original)
+        // 5) Carga de vistas
         $this->load->view('partial/header');
         $this->load->view('partial/header_facturacion', $datos_usuario);
         $this->load->view('billing/index', [
@@ -170,6 +188,8 @@ class Billing extends Secure_area
         ]);
         $this->load->view('partial/footer');
     }
+
+
 
     /**
      * Redirige a SIAT para ver la factura vía QR.
@@ -217,83 +237,92 @@ class Billing extends Secure_area
         redirect('https://pilotosiat.impuestos.gob.bo/consulta/QR?' . http_build_query($query));
     }
 
-    /**
-     * Imprimir ticket: redirige al endpoint de la API que genera/imprime ticket.
-     * billing/imprimir_ticket/{idfac}
-     */
-   public function imprimir_ticket($idfac = null)
-{
-    if (!$idfac) {
-        $this->session->set_flashdata('error', 'Factura no especificada');
-        redirect('billing/index');
-        return;
-    }
-    $datos_usuario = $this->_datos_usuario();
-    $sucursal_id = $datos_usuario['sucursal_id'];
-    if (!$sucursal_id) {
-        $this->session->set_flashdata('error', 'No tienes sucursal asignada');
-        redirect('billing/index');
-        return;
-    }
+   public function imprimirTicket($sale_id)
+    {
+        $this->load->model(['Sale', 'Sale_items', 'Customer', 'Employee']);
 
-    // 1) Obtener datos de factura (asegúrate que devuelvan estas claves)
-    // Ejemplo: llamar a API listarFacturas con rango amplio y filtrar:
-    $resp = $this->call_api([
-        'funcion'     => 'listarFacturas',
-        'ids'         => $sucursal_id,
-        'fechainicio' => '1900-01-01',
-        'fechafin'    => date('Y-m-d')
-    ]);
-    $lista = $resp['facturas'] ?? [];
-    $factura = null;
-    foreach ($lista as $f) {
-        if ((string)$f['id'] === (string)$idfac) {
-            $factura = $f;
-            break;
+        $venta = $this->Sale->get_info_sale($sale_id);
+        if (empty($venta)) {
+            show_404();
+            return;
         }
-    }
-    if (!$factura) {
-        $this->session->set_flashdata('error', 'No se encontró la factura solicitada');
-        redirect('billing/index');
-        return;
-    }
-    // 2) Obtener ítems (asegúrate que devuelvan claves como en la plantilla original)
-    $detalle = $this->call_api([
-        'funcion' => 'listarDetalleFactura',
-        'ids'     => $sucursal_id,
-        'idf'     => $idfac
-    ]);
-    $items = $detalle['items'] ?? [];
 
-    // 3) Calcular $zero (cero) igual que en plantilla: si la parte entera es 0
-    $zero = '';
-    if (isset($factura['montoTotalSujetoIva'])) {
-        $enteroArr = explode('.', $factura['montoTotalSujetoIva']);
-        if (isset($enteroArr[0]) && intval($enteroArr[0]) === 0) {
-            $zero = 'cero';
+        $items = $this->Sale_items->get_info_sale($sale_id);
+        $cliente = $this->Customer->get_info($venta->customer_id);
+
+        $employee_id = $this->Employee->get_logged_in_employee_info()->person_id;
+        $this->db->select('sucursal_id');
+        $this->db->from('phppos_sucursal_empleado');
+        $this->db->where('employee_id', $employee_id);
+        $query = $this->db->get();
+        $sucursal_id = $query->num_rows() > 0 ? $query->row()->sucursal_id : 1;
+
+        $resp = $this->call_api(['funcion' => 'listarPos']);
+        $sucursal_nombre = '';
+        $sucursal_direccion = '';
+        if (!empty($resp['pos']['data'])) {
+            foreach ($resp['pos']['data'] as $suc) {
+                if ((int)$suc['id'] === (int)$sucursal_id) {
+                    $sucursal_nombre = $suc['nombre'];
+                    $sucursal_direccion = $suc['direccion'];
+                    break;
+                }
+            }
         }
-    }
-    // 4) Calcular leyenda según tipoEmision
-    $leyenda = '';
-    if (isset($factura['tipoEmision'])) {
-        if ((string)$factura['tipoEmision'] === '1') {
-            $leyenda = '“Este documento es la Representación Gráfica de un<br>
-Documento Fiscal Digital emitido en una modalidad de<br>
-facturación en línea”';
-        } else {
-            $leyenda = '“Este documento es la Representación Gráfica de un Documento Fiscal Digital emitido fuera de línea, verifique su envío con su proveedor o en la página web www.impuestos.gob.bo”.';
+
+        $payload = [
+            'funcion'       => 'obtenerDatosFactura',
+            'ids'           => $sucursal_id,
+            'sale_id'       => (string)$sale_id,
+            'numeroFactura' => $venta->invoice_number
+        ];
+        $respuesta = $this->call_api($payload);
+        if (empty($respuesta['datos'])) {
+            show_error('No se recibieron datos de facturación.', 500);
+            return;
         }
+        $factura = $respuesta['datos'];
+
+        $data = [
+            'empresa'  => [
+                'nombre'    => $this->config->item('company'),
+                'direccion' => $this->config->item('address')
+            ],
+            'sucursal' => [
+                'nombre'    => $sucursal_nombre,
+                'direccion' => $sucursal_direccion
+            ],
+            'venta'    => [
+                'fecha'     => date('Y-m-d', strtotime($venta->sale_time)),
+                'hora'      => date('H:i:s', strtotime($venta->sale_time)),
+                'items'     => array_map(function($it) {
+                                    return [
+                                        'cantidad'    => $it->quantity,
+                                        'descripcion' => $it->description,
+                                        'subtotal'    => $it->unit_price * $it->quantity
+                                    ];
+                                }, $items),
+                'subtotal'  => $venta->subtotal,
+                'descuento' => $venta->discount,
+                'total'     => $venta->total
+            ],
+            'cliente'  => [
+                'nombre'    => $cliente ? $cliente->first_name . ' ' . $cliente->last_name : 'PUBLICO EN GENERAL',
+                'nit'       => $cliente ? $cliente->nit : '',
+                'direccion' => $cliente ? $cliente->address : ''
+            ],
+            'factura'  => [
+                'numeroFactura' => $factura['numeroFactura'],
+                'cuf'           => $factura['cuf'],
+                'estado'        => $factura['estado'],
+                'qr'            => $factura['qr'] ?? ''
+            ]
+        ];
+
+        $this->load->view('billing/imprimirticket', $data);
     }
-    // 5) Pasar datos a la vista
-    $this->load->helper('letras'); // si usarás convertir_a_letras en la vista
-    $data = [
-        'factura' => $factura,
-        'items'   => $items,
-        'zero'    => $zero,
-        'leyenda' => $leyenda
-    ];
-    $this->load->view('billing/imprimirticket', $data);
-}
+ 
+
 
     public function anular_factura()
     {
@@ -725,7 +754,7 @@ facturación en línea”';
         }
 
         $respPdv = $this->call_api(['funcion' => 'listarPos']);
-        $posApi  = $respPdv['pos']['data'] ?? [];
+        $posApi  = $respPdv['pos']['data'] ?? [];  
         foreach ($posApi as $pv) {
 
             $s = $this->db
